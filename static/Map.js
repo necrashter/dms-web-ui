@@ -1,0 +1,102 @@
+const Map = L.map('map', {
+	preferCanvas: true, // improves performance
+	attributionControl: false,
+	zoomControl: false
+}).setView([40.99,29.03], 13);
+
+const OpenStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	maxZoom: 19,
+	attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+});
+
+const StamenTerrain = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.{ext}', {
+	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+	subdomains: 'abcd',
+	minZoom: 0,
+	maxZoom: 18,
+	ext: 'png'
+});
+
+const StamenTonerLite = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.{ext}', {
+	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+	subdomains: 'abcd',
+	minZoom: 0,
+	maxZoom: 20,
+	ext: 'png'
+});
+
+// TODO: switching
+var baseMaps = {
+	"OpenStreetMap": OpenStreetMap,
+	"StamenTerrain": StamenTerrain,
+	"StamenTonerLite": StamenTonerLite,
+};
+var selectedBaseMap = null;
+
+function selectMap(name) {
+	if(selectedBaseMap) {
+		baseMaps[selectedBaseMap].remove();
+	}
+	baseMaps[name].addTo(Map).bringToBack();
+	selectedBaseMap = name;
+}
+
+selectMap("StamenTerrain");
+var TopRightPanel = document.getElementById("TopRightPanel");
+
+
+(function() { // limits the scope
+	var innerDiv;
+	const wrapperDiv = d3.create("div").attr("class","CustomSelect");
+	var headDiv = wrapperDiv.append("div")
+		.attr("class", "CustomSelectHead")
+		.text(selectedBaseMap)
+		.on("click", function(arg) {
+			innerDiv.classList.toggle("open");
+		}).node();
+	const ul = wrapperDiv.append("div").attr("class", "CustomSelectList").append("div");
+	innerDiv = ul.node();
+
+	const data = Object.keys(baseMaps);
+	ul.selectAll("div").data(data).join("div")
+		.attr("class", "CustomSelectElement")
+		.text(d => d)
+		.on("click", d => {
+			selectMap(d);
+			headDiv.innerText=d;
+			innerDiv.classList.remove("open");
+		});
+
+	TopRightPanel.appendChild(wrapperDiv.node());
+})();
+
+
+var latdiv = document.getElementById("LatLang");
+
+Map.on('mousemove', (event) => {
+	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
+	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
+	latdiv.innerHTML = "Lat: " + lat + "<br/>Lng: " + lng;
+	// Pass the originalEvent
+	Tooltip.onMouseMove(event.originalEvent);
+});
+
+
+Map.on('click', event => {
+	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
+	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
+	console.log("{ \"latlng\": [",lat,",",lng,"]}");
+});
+
+// this function can be used to add some layers
+// depending on the zoom level
+/*
+Map.on('zoomend', (event) => {
+  if(Map.getZoom() > 16) {
+	Graph.markerLayer.addTo(Map); //multiple consecutive calls have no effect
+  } else {
+	Graph.markerLayer.remove();
+  }
+});
+*/
+
