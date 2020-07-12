@@ -10,8 +10,9 @@
 
 .CustomSelectHead {
 	position: relative;
-	padding: 0.2em 3em 0.2em 0.2em;
+	padding: 0.2em;
 	background: #031E11CA;
+	width: 12em;
 }
 .CustomSelectHead::before {
 	content: "";

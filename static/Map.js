@@ -73,19 +73,27 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 
 var latdiv = document.getElementById("LatLang");
 
+//var mouseLat
 Map.on('mousemove', (event) => {
+	Map.mousePos = [event.latlng.lat, event.latlng.lng];
 	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
 	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
 	latdiv.innerHTML = "Lat: " + lat + "<br/>Lng: " + lng;
 	// Pass the originalEvent
-	Tooltip.onMouseMove(event.originalEvent);
+	//Tooltip.onMouseMove(event.originalEvent);
 });
 
 
 Map.on('click', event => {
+	// NOTE: This fires even if user clicks on a marker
+	//resetBottomRightPanel();
 	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
 	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
 	console.log("{ \"latlng\": [",lat,",",lng,"]}");
+});
+
+Map.on("contextmenu", event => {
+	console.log("contextmenu");
 });
 
 // this function can be used to add some layers

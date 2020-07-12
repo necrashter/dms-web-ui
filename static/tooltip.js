@@ -22,4 +22,5 @@ var Tooltip = {
 };
 
 
-Tooltip.div.innerHTML = " Test";
+//Tooltip.div.innerHTML = " Test";
+window.addEventListener("mousemove", Tooltip.onMouseMove);

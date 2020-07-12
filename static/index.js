@@ -8,3 +8,4 @@ Server.get("sample.json").then(response => {
 	alert("Failed to get graph data from server:\n"+error);
 });
 
+
