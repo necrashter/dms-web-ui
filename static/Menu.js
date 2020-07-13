@@ -90,7 +90,7 @@ function horizontalBarPlot(data, width, height, options={}) {
     .data(data)
     .join("text")
 		.attr("x", d => x(d.value))
-		.attr("y", (d, i) => y(d.name) + y.bandwidth() / 2)
+		.attr("y", (d) => y(d.name) + y.bandwidth() / 2)
 		.attr("dy", "0.35em")
 		.attr("dx", -4)
 		.text(d => d.value)
@@ -171,9 +171,9 @@ function createBranchStats() {
 		.style("width", "0px")
 	bar.transition().duration(1500)
 		.style("width", d => `${x(d)}%`)
-	bar.append("p").text((d,i) => d)
+	bar.append("p").text((d) => d)
 	join.append("div")
-		.text((d,i) => labels[i]);
+		.text((_,i) => labels[i]);
 	return div.node();
 }
 
@@ -207,3 +207,20 @@ MenuButton.addEventListener("click", function() {
 	statsButton();
 	Overlay.classList.remove("hidden");
 });
+
+
+function showModalOverlay(content, options={}) {
+	Overlay.innerHTML = `
+	<div id="Centred">
+	  <div id="OverlayClose" class="blockButton">X</div>
+	  <div id="CentredContent"></div>
+	</div>
+	`;
+	document.getElementById("OverlayClose").addEventListener("click", function () {
+		Overlay.classList.add("hidden");
+		Overlay.classList.remove("warning");
+	});
+	if(options.warning) Overlay.classList.add("warning");
+	Overlay.classList.remove("hidden");
+	document.getElementById("CentredContent").appendChild(content);
+}

@@ -24,3 +24,28 @@ var Tooltip = {
 
 //Tooltip.div.innerHTML = " Test";
 window.addEventListener("mousemove", Tooltip.onMouseMove);
+
+
+var ContextMenu = {
+	div: document.getElementById("ContextMenu"),
+	hidden: true,
+	toggle: function(event) {
+		if(ContextMenu.hidden) ContextMenu.show(event);
+		else ContextMenu.hide();
+	},
+	show: function(event) {
+		Tooltip.hide();
+		ContextMenu.div.style.left = event.clientX+10 +"px";
+		ContextMenu.div.style.top = event.clientY+10 + "px";
+		ContextMenu.hidden = false;
+		ContextMenu.div.classList.remove("hidden");
+	},
+	hide: function () {
+		if(ContextMenu.hidden) return;
+		ContextMenu.hidden = true;
+		ContextMenu.div.classList.add("hidden");
+	},
+}
+window.addEventListener("mouseup", function(event) {
+	if(event.button == 0) ContextMenu.hide();
+});

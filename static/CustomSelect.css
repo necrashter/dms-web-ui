@@ -12,7 +12,7 @@
 	position: relative;
 	padding: 0.2em;
 	background: #031E11CA;
-	width: 12em;
+	/* width: 12em; */
 }
 .CustomSelectHead::before {
 	content: "";

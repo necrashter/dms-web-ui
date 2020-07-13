@@ -33,17 +33,41 @@ Icons.crosshair = L.icon({
     iconAnchor:   IconAnchor, // point of the icon which will correspond to marker's location
 });
 
-function readFile(event) {
-	var file = event.target.files[0];
-	if (!file) {
-		return;
-	}
-	var reader = new FileReader();
-	reader.onload = function(e) {
-		var contents = e.target.result;
-		console.log(contents);
-	};
-	reader.readAsText(file);
+function createTextInput(target, name, value) {
+	let div = target.append("div");
+	div.append("label").attr("for", name).text(name+":");
+	let input = div.append("input").attr("type", "text").property("value", value);
+	return input;
+}
+
+function createSelectBox(target, data, name, value) {
+	let info = {value: value};
+	let currentName = data.find(d => d.value == value).name;
+	let div = target.append("div").style("display", 'flex');
+	div.append("label").text(name+":");
+	var innerDiv;
+	const wrapperDiv = div.append("div")
+		.attr("class","CustomSelect")
+		.style("flex-grow", 1);
+	var headDiv = wrapperDiv.append("div")
+		.attr("class", "CustomSelectHead")
+		.text(currentName)
+		.on("click", function() {
+			innerDiv.classList.toggle("open");
+		}).node();
+	const ul = wrapperDiv.append("div").attr("class", "CustomSelectList")
+		.append("div");
+	innerDiv = ul.node();
+
+	ul.selectAll("div").data(data).join("div")
+		.attr("class", "CustomSelectElement")
+		.text(d => d.name)
+		.on("click", d => {
+			info.value = d.value;
+			headDiv.innerText=d.name;
+			innerDiv.classList.remove("open");
+		});
+	return info;
 }
 
 /**
@@ -89,11 +113,63 @@ var Graph = {
 	/**
 	 * Loads the graph data, doesn't render
 	 */
+	requiredFields: ["nodes", "branches", "externalBranches", "resources"],
 	loadGraph: function(graph) {
-		Graph.nodes = graph.nodes;
-		Graph.branches = graph.branches;
-		Graph.externalBranches = graph.externalBranches;
-		Graph.resources = graph.resources;
+		Graph.requiredFields.forEach(field => {
+			Graph[field] = graph[field];
+		});
+		BottomRightPanel.innerHTML =
+			`<h1>Loaded new graph</h1>
+			`;
+	},
+	readFile: function readFile(event) {
+		var file = event.target.files[0];
+		if (!file) {
+			return;
+		}
+		var reader = new FileReader();
+		reader.onload = function(e) {
+			var contents = e.target.result;
+			let parsed;
+			try {
+				parsed = JSON.parse(contents);
+			} catch(error) {
+				let div = d3.create("div").style("margin", "40vh 0");
+				div.append("h1").text("Error while reading file");
+				div.append("p").style("font-family", "monospace")
+					.text(error.message);
+				showModalOverlay(div.node(), { warning: true });
+				return;
+			}
+			if(parsed.nodes && parsed.branches && parsed.externalBranches
+				&& parsed.resources) {
+				// TODO: more checks
+				Graph.loadGraph(parsed);
+				Graph.rerender();
+			} else {
+				let div = d3.create("div");
+				div.append("h1").text("Malformed File");
+				div.append("p").text("Given JSON lacks at least one of the following fields:");
+				div.append("ul").selectAll("li")
+					.data(Graph.requiredFields).join("li")
+					.text(d => d);
+				showModalOverlay(div.node(), { warning: true });
+			}
+		};
+		reader.readAsText(file);
+	},
+	getJson: function() {
+		let g = {};
+		g.nodes = this.nodes.map(n => {
+			return { latlng: n.latlng }
+		});
+		g.branches = this.branches;
+		g.externalBranches = this.externalBranches;
+		g.resources = this.resources;
+		return JSON.stringify(g, null, 4);
+	},
+	saveFile: function(filename="graph.json") {
+		downloadData(filename, Graph.getJson());
 	},
 
 	/**
@@ -119,15 +195,42 @@ var Graph = {
 	},
 	nodeOnClick: function (event) {
 		let node = event.target.node;
+		if(Graph.mode == 0) Graph.nodeOnInfo(node);
+		else Graph.nodeOnEdit(node);
+	},
+	nodeOnInfo: function(node) {
 		BottomRightPanel.innerHTML = `
 			<h1>Node #${Graph.nodes.indexOf(node)}</h1>
-			<p>Lat: ${Math.round(10000*event.target._latlng.lat)/10000}</p>
-			<p>Lng: ${Math.round(10000*event.target._latlng.lng)/10000}</p>
+			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
+			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
 			<p>Connected to ${node.branches.length} branches.</p>
 			`;
 		if(node.externalBranches.length>0) {
 			BottomRightPanel.innerHTML += "<p>Connected to a resource.</p>";
 		}
+	},
+	nodeOnEdit: function(node) {
+		BottomRightPanel.innerHTML = `
+			<h1>Node #${Graph.nodes.indexOf(node)}</h1>
+			<p>Connected to ${node.branches.length} branches.</p>
+			`;
+		let controls = d3.create("div");
+		let latInput = createTextInput(controls, "Lat", node.latlng[0]);
+		let lngInput = createTextInput(controls, "Lng", node.latlng[1]);
+		controls.append("div").classed("blockButton", true)
+			.text("OK")
+			.on("click", () => {
+				let lat = parseFloat(latInput.property("value"));
+				let lng = parseFloat(lngInput.property("value"));
+				node.latlng = [
+					isNaN(lat) ? node.latlng[0] : lat,
+					isNaN(lng) ? node.latlng[1] : lng,
+				];
+				latInput.property("value", node.latlng[0]);
+				lngInput.property("value", node.latlng[1]);
+				Graph.rerender();
+			});
+		BottomRightPanel.appendChild(controls.node());
 	},
 	resourceOnMouseOver: function(event) {
 		Graph.lastHover.type = "resource";
@@ -146,13 +249,44 @@ var Graph = {
 	},
 	resourceOnClick: function(event) {
 		let resource = event.target.data;
+		if(Graph.mode == 0) Graph.resourceOnInfo(resource);
+		else Graph.resourceOnEdit(resource);
+	},
+	resourceOnInfo: function(resource) {
 		let name = resource.type ? "DER" : "Transmission Grid";
 		BottomRightPanel.innerHTML = `
 			<h1>${name}</h1>
 			${resource.type ? "<p>Type: "+resource.type+"</p>" : ""}
-			<p>Lat: ${Math.round(10000*event.target._latlng.lat)/10000}</p>
-			<p>Lng: ${Math.round(10000*event.target._latlng.lng)/10000}</p>
+			<p>Lat: ${Math.round(10000*resource.latlng[0])/10000}</p>
+			<p>Lng: ${Math.round(10000*resource.latlng[1])/10000}</p>
 			`;
+	},
+	resourceOnEdit: function(resource) {
+		BottomRightPanel.innerHTML = `
+			<h1>Resource #${Graph.resources.indexOf(resource)}</h1>
+			`;
+		let controls = d3.create("div");
+		let latInput = createTextInput(controls, "Lat", resource.latlng[0]);
+		let lngInput = createTextInput(controls, "Lng", resource.latlng[1]);
+		let type = createSelectBox(controls,[
+			{name: "Transmission Grid", value: null},
+			{name: "Solar Panel", value: "solar"},
+		], "Type", resource.type);
+		controls.append("div").classed("blockButton", true)
+			.text("OK")
+			.on("click", () => {
+				let lat = parseFloat(latInput.property("value"));
+				let lng = parseFloat(lngInput.property("value"));
+				resource.latlng = [
+					isNaN(lat) ? resource.latlng[0] : lat,
+					isNaN(lng) ? resource.latlng[1] : lng,
+				];
+				resource.type = type.value;
+				latInput.property("value", resource.latlng[0]);
+				lngInput.property("value", resource.latlng[1]);
+				Graph.rerender();
+			});
+		BottomRightPanel.appendChild(controls.node());
 	},
 	resourceOnMouseOut: function(event) {
 		Graph.lastHover.hovered = false;
@@ -180,7 +314,11 @@ var Graph = {
 	},
 	branchOnClick: function(event) {
 		let branch = event.target.branch;
-		let pf = event.target.branch.pf;
+		if(Graph.mode == 0) Graph.branchOnInfo(branch);
+		else Graph.branchOnEdit(branch);
+	},
+	branchOnInfo: function(branch) {
+		let pf = branch.pf;
 		let status;
 		switch(branch.status){
 			case -1: status="Damaged"; break;
@@ -194,6 +332,30 @@ var Graph = {
 			  <p>Probability of Failure: ${pf ? pf : "Unknown"}</p>
 			  ${branch.status>0 ? "<p>Source: "+branch.source+"</p>" : ""}
 			`;
+	},
+	branchOnEdit: function(branch) {
+		BottomRightPanel.innerHTML =
+			`<h1>Branch #${Graph.branches.indexOf(branch)} </h1>
+			  <p>Connects nodes ${branch.nodes[0]} and ${branch.nodes[1]}</p>
+			`;
+		let controls = d3.create("div");
+		let status = createSelectBox(controls,[
+			{name: "Damaged", value: -1},
+			{name: "Unknown", value: 0},
+			{name: "Energized", value: 1},
+		], "status", branch.status);
+		let pfInput = createTextInput(controls, "Probability of Failure", branch.pf);
+		controls.append("div").classed("blockButton", true)
+			.text("OK")
+			.on("click", () => {
+				let pf = parseFloat(pfInput.property("value"));
+				branch.pf = isNaN(pf) ? branch.pf : pf;
+				branch.pf = Math.min(1.0, Math.max(0.0, branch.pf));
+				branch.status = status.value;
+				pfInput.property("value", branch.pf);
+				Graph.rerender();
+			});
+		BottomRightPanel.appendChild(controls.node());
 	},
 	branchOnMouseOut: function (event) {
 		Graph.lastHover.hovered = false;
@@ -354,12 +516,13 @@ var Graph = {
 				.text("Load");
 			topbar.append("input").attr("id", "fileInput")
 				.attr("type", "file")
-				.node().addEventListener("change", readFile, false);
+				.node().addEventListener("change", Graph.readFile, false);
+
 			topbar.append("div").classed("blockButton", true)
 				.classed("alt", true)
 				.text("Save")
 				.on("click", function() {
-					//TODO
+					Graph.saveFile();
 				});
 			topbar.append("div").classed("blockButton", true)
 				.classed("alt", true)
@@ -376,6 +539,13 @@ var Graph = {
 				.style("transform", "translate(0, 0)");
 			this.topbar = topbar;
 			HUD.appendChild(topbar.node());
+			BottomRightPanel.innerHTML =
+			`<h1>Edit Mode</h1>
+			  <p>a: add node</p>
+			  <p>s: add branch</p>
+			  <p>q: add transmission grid</p>
+			  <p>w: add solar panel</p>
+			`;
 		} else {
 			TopLeftPanel.classList.remove("warning");
 			TopLeftPanel.innerText = "METU CPS";
@@ -383,6 +553,9 @@ var Graph = {
 			topbar.transition().duration(1000)
 				.style("transform", "translate(0, -53px)")
 				.on("end", () => { topbar.remove(); });
+			BottomRightPanel.innerHTML =
+			`<h1>Normal Mode</h1>
+			`;
 		}
 	},
 	addBranch: function(source, target) {
@@ -402,15 +575,73 @@ var Graph = {
 			status: 1,
 		});
 	},
+	addNode: function(position) {
+		let newNode = {
+			"latlng": position
+		}
+		this.nodes.push(newNode);
+	},
+	removeElement: function(victim) {
+		let i;
+		let data = victim.data;
+		switch(victim.type) {
+			case "node":
+				i = this.nodes.indexOf(data);
+				this.nodes.splice(i, 1);
+				this.branches = this.branches.filter(b => {
+					return !b.nodes.includes(i);
+				});
+				// decrease the indexes of following nodes
+				this.branches.forEach((b) => {
+					b.nodes = b.nodes.map(n =>
+						n > i ? n-1 : n
+					);
+				});
+				this.externalBranches = this.externalBranches.filter(b => b.node != i);
+				this.externalBranches.forEach((b) => {
+					if(b.node > i) b.node--;
+				});
+				return true;
+			case "resource":
+				i = this.resources.indexOf(data);
+				this.resources.splice(i, 1);
+				this.branches.forEach(b => {
+					if(b.source === i) {
+						if(b.status == 1) b.status = 0;
+						b.source = null;
+					} else if(b.source > i) {
+						b.source--;
+					}
+				});
+				this.externalBranches = this.externalBranches.filter(b => b.source !== i);
+				this.externalBranches.forEach(b => {
+					if(b.source === i) {
+						if(b.status == 1) b.status = 0;
+						b.source = null;
+					} else if(b.source > i) {
+						b.source--;
+					}
+				});
+				return true;
+			case "branch":
+				i = this.branches.indexOf(data);
+				this.branches.splice(i, 1);
+				return true;
+			case "externalBranch":
+				i = this.externalBranches.indexOf(data);
+				this.externalBranches.splice(i, 1);
+				return true;
+			default:
+				return false;
+		}
+		
+	},
 	handleKeyDown: function(event) {
 		if(this.mode == 1) {
 			switch(event.key) {
 				case "a":
 					if(!Map.mousePos) return;
-					let newNode = {
-						"latlng": Map.mousePos
-					}
-					this.nodes.push(newNode);
+					this.addNode(Map.mousePos);
 					this.rerender();
 					break;
 				case "s":
@@ -447,65 +678,13 @@ var Graph = {
 					this.crosshair = L.marker(this.lastHover.pos, {
 						icon: Icons.crosshair
 					}).addTo(Map);
+					this.crosshair._icon.style.pointerEvents = "none";
 					this.lastSelect = Object.assign({}, this.lastHover);
 					break;
 				case "x":
 					if(this.lastHover.hovered) {
-						let i;
-						let data = this.lastHover.data;
-						switch(this.lastHover.type) {
-							case "node":
-								i = this.nodes.indexOf(data);
-								this.nodes.splice(i, 1);
-								this.branches = this.branches.filter(b => {
-									return !b.nodes.includes(i);
-								});
-								// decrease the indexes of following nodes
-								this.branches.forEach((b) => {
-									b.nodes = b.nodes.map(n =>
-										n > i ? n-1 : n
-									);
-								});
-								this.externalBranches = this.externalBranches.filter(b => b.node != i);
-								this.externalBranches.forEach((b) => {
-									if(b.node > i) b.node--;
-								});
-								this.rerender();
-								break;
-							case "resource":
-								i = this.resources.indexOf(data);
-								this.resources.splice(i, 1);
-								this.branches.forEach(b => {
-									if(b.source === i) {
-										if(b.status == 1) b.status = 0;
-										b.source = null;
-									} else if(b.source > i) {
-										b.source--;
-									}
-								});
-								this.externalBranches = this.externalBranches.filter(b => b.source !== i);
-								this.externalBranches.forEach(b => {
-									if(b.source === i) {
-										if(b.status == 1) b.status = 0;
-										b.source = null;
-									} else if(b.source > i) {
-										b.source--;
-									}
-								});
-								this.rerender();
-								break;
-							case "branch":
-								i = this.branches.indexOf(data);
-								this.branches.splice(i, 1);
-								this.rerender();
-								break;
-							case "externalBranch":
-								i = this.externalBranches.indexOf(data);
-								this.externalBranches.splice(i, 1);
-								this.rerender();
-								break;
-							default:
-								break;
+						if(this.removeElement(this.lastHover)) {
+							this.rerender();
 						}
 					}
 					break;
@@ -538,15 +717,59 @@ var Graph = {
 		Graph.externalBranchLayer.remove();
 		this.render(Map);
 	},
-	getJson: function() {
-		let g = {};
-		g.nodes = this.nodes.map(n => {
-			return { latlng: n.latlng }
-		});
-		g.branches = this.branches;
-		g.externalBranches = this.externalBranches;
-		g.resources = this.resources;
-		return JSON.stringify(g);
+	contextMenu: function(event) {
+		if(this.mode == 0) this.normalContextMenu(event);
+		else this.editContextMenu(event);
+	},
+	normalContextMenu: function(event) {
+		let menu = d3.select("#ContextMenu").html("");
+		menu.append("div")
+			.text("Switch to Edit Mode")
+			.on("click", () => {
+				this.setMode(1);
+			});
+	},
+	editContextMenu: function(event) {
+		let position = [event.latlng.lat, event.latlng.lng];
+		let menu = d3.select("#ContextMenu").html("");
+		if(this.lastHover.hovered) {
+			menu.append("div")
+				.text("Remove")
+				.on("click", () => {
+					if(this.removeElement(this.lastHover))
+						this.rerender();
+				});
+		} else {
+			menu.append("div")
+				.text("Add Node")
+				.on("click", () => {
+					this.addNode(position);
+					this.rerender();
+				});
+			menu.append("div")
+				.text("Add Resource")
+				.on("click", () => {
+					this.resources.push({
+						latlng: position,
+						type: null,
+					});
+					this.rerender();
+				});
+			menu.append("div")
+				.text("Add Solar Panel")
+				.on("click", () => {
+					this.resources.push({
+						latlng: position,
+						type: "solar",
+					});
+					this.rerender();
+				});
+		}
+		menu.append("div")
+			.text("Switch to Normal Mode")
+			.on("click", () => {
+				this.setMode(0);
+			});
 	},
 }; //end Graph
 

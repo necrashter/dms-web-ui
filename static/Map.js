@@ -50,6 +50,7 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 	const wrapperDiv = d3.create("div").attr("class","CustomSelect");
 	var headDiv = wrapperDiv.append("div")
 		.attr("class", "CustomSelectHead")
+		.style("width", "12em")
 		.text(selectedBaseMap)
 		.on("click", function(arg) {
 			innerDiv.classList.toggle("open");
@@ -93,7 +94,10 @@ Map.on('click', event => {
 });
 
 Map.on("contextmenu", event => {
-	console.log("contextmenu");
+	console.log("contextmenu")
+	Graph.contextMenu(event);
+	ContextMenu.toggle(event.originalEvent);
+	event.originalEvent.preventDefault();
 });
 
 // this function can be used to add some layers
