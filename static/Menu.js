@@ -34,72 +34,6 @@ function aboutButton() {
 	Overlay.classList.remove("hidden");
 }
 
-function horizontalBarPlot(data, width, height, options={}) {
-	let margin = {top: 20, right: 40, bottom: 40, left: 90};
-	if(options.margin) Object.assign(margin, options.margin);
-	// effective width and height
-	let ew = width - margin.right - margin.left;
-	let eh = height - margin.top - margin.bottom;
-	let SVG = d3.create("svg")
-		.attr("width", width )
-		.attr("height", height )
-	let svg = SVG.append("g")
-		.attr("transform",
-          "translate(" + margin.left + "," + margin.top + ")");
-	var x = d3.scaleLinear()
-		.domain([0, d3.max(data.map(d => d.value))])
-		.range([ 0, ew]);
-	svg.append("g")
-		.attr("transform", "translate(0," + eh + ")")
-		.call(d3.axisBottom(x))
-		.selectAll("text")
-		.attr("font-size", "16px")
-		//.attr("transform", "translate(-10,0)rotate(-45)")
-		//.style("text-anchor", "end");
-	var y = d3.scaleBand()
-		.range([ 0, eh ])
-		.domain(data.map((d) => d.name))
-		.padding(.1);
-	svg.append("g")
-		.call(d3.axisLeft(y))
-		.selectAll("text")
-		.attr("font-size", "16px");
-	svg.selectAll("myRect")
-		.data(data)
-		.enter()
-		.append("rect")
-		.attr("x", x(0) )
-		.attr("y", (d) => y(d.name) )
-		.attr("width", 0)
-		.attr("height", y.bandwidth() )
-		.attr("fill", "#14fdce")
-		.on("mouseover", (d) => {
-			Tooltip.div.innerHTML = d.name + " " + d.value;
-			Tooltip.show();
-		})
-		.on("mouseout", Tooltip.hide)
-		//.on("click", (d) => console.log(d))
-		.transition().duration(1000)
-		.attr("width", (d) => x(d.value))
-	svg.append("g")
-		.attr("fill", "#022011")
-		.attr("text-anchor", "end")
-		.attr("font-family", "sans-serif")
-		.attr("font-size", 16)
-    .selectAll("text")
-    .data(data)
-    .join("text")
-		.attr("x", d => x(d.value))
-		.attr("y", (d) => y(d.name) + y.bandwidth() / 2)
-		.attr("dy", "0.35em")
-		.attr("dx", -4)
-		.text(d => d.value)
-    .call(text => text.filter(d => x(d.value) - x(0) < 20) // short bars
-		.attr("dx", +4)
-		.attr("fill", "#14fdce")
-		.attr("text-anchor", "start"));
-	return SVG.node();
-}
 
 function statsButton() {
 	let content = d3.select("#OverlayContent").html("")
@@ -127,9 +61,37 @@ function statsButton() {
 		}), width, height, )
 	);
 
-	content.append("div").classed("halfBox", true)
-		.append("div").classed("contentBox", true)
-		.text("Testing testing testing testing testing testing ");
+	{
+		let box = content.append("div").classed("halfBox", true)
+			.append("div").classed("contentBox", true);
+		box.append("h1").text("Failure Probabilities");
+		let division = 10;
+		let data = { "Unknown" : 0};
+		let keys = [];
+		for(let i =0; i<division; ++i) {
+			let lower = i/division;
+			let upper = (i+1)/division;
+			let name = `[${lower}, ${upper})`;
+			keys.push(name);
+			data[name] = 0;
+		}
+		Graph.branches.forEach(branch => {
+			if(isNaN(branch.pf)) {
+				data["Unknown"] += 1;
+			} else {
+				let index = Math.floor(branch.pf*division);
+				if(keys[index])
+					data[keys[index]] += 1;
+				else
+					data["Unknown"] += 1;
+			}
+		});
+		let width = box.node().getBoundingClientRect().width;
+		let height = content.node().getBoundingClientRect().height / 2 - 100;
+		box.append(() => donutChart(Object.keys(data).map(d => {
+			return { name: d, value: data[d] };
+		}) , width, height) );
+	}
 	content.append("div").classed("halfBox", true)
 		.append("div").classed("contentBox", true)
 		.text("Testing testing testing testing testing testing ");
@@ -152,30 +114,6 @@ function generateSideBar() {
 	return div.node();
 }
 
-function createBranchStats() {
-	var labels = ["Damaged", "Unknown", "Energized"];
-	var data = [0, 0, 0];
-	Graph.branches.forEach(branch => {
-		data[branch.status+1] += 1;
-	});
-	let domain = [0, d3.max(data)];
-	let x = d3.scaleLinear()
-		.domain(domain)
-		.range([0, 80]);
-	const div =  d3.create("div").classed("barWrap", true);
-
-	let join = div.selectAll("div").data(data).join("div")
-		.classed("horizontalBarWrap", true);
-	let bar = join.append("div")
-		.classed("horizontalBar", true)
-		.style("width", "0px")
-	bar.transition().duration(1500)
-		.style("width", d => `${x(d)}%`)
-	bar.append("p").text((d) => d)
-	join.append("div")
-		.text((_,i) => labels[i]);
-	return div.node();
-}
 
 function d3testMenu() {
 	let inner = generateCentredDiv();
