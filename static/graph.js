@@ -70,59 +70,57 @@ function createSelectBox(target, data, name, value) {
 	return info;
 }
 
-/**
- * Namespace/Singleton for Graph functions
- * Can be converted into a class if needed, but I didn't do it
- * since there will be only one graph
- */
-var Graph = {
-	/**
-	 * 0: normal mode
-	 * 1: edit mode
-	 */
-	mode: 0,
-	lastHover: { type: null, data: null, hovered: false },
-	/**
-	 * Contains objects of form 
-	 * { latlng: [lat, lng] }
-	 * where lat and lng are the latitude and longtitude of the node.
-	 * A property called "branches" will be used to store the branches that
-	 * are connected to this node.
-	 */
-	nodes: [],
-	/**
-	 * Contains objects of form
-	 * { nodes: [i_0, i_1], status: s, source: L }
-	 * where i_0 and i_1 are the indexes of nodes that the branch connects,
-	 * s is 0 for unknown, -1 for damaged, 1 for energized
-	 * L is the index of the DER that powers the branch if the branch is energized
-	 */
-	branches: [],
-	/**
-	 * Contains objects of form
-	 * { node: i, status: s, source: L }
-	 * similar to branches, but connects a resource and node
-	 */
-	externalBranches: [],
-	/**
-	 * Includes transmission grid and DERs
-	 * { latlng: [lat, lng], type: type }
-	 * where type is a string describing the type of DER or null for transmission grid
-	 */
-	resources: [],
+class Graph {
+	constructor(options) {
+		/**
+		 * 0 = normal mode
+		 * 1 = edit mode
+		 */
+		this.mode = 0;
+		this.lastHover = { type: null, data: null, hovered: false };
+		/**
+		 * Contains objects of form 
+		 * { latlng = [lat, lng] }
+		 * where lat and lng are the latitude and longtitude of the node.
+		 * A property called "branches" will be used to store the branches that
+		 * are connected to this node.
+		 */
+		this.nodes = [];
+		/**
+		 * Contains objects of form
+		 * { nodes: [i_0, i_1], status: s, source = L }
+		 * where i_0 and i_1 are the indexes of nodes that the branch connects;
+		 * s is 0 for unknown, -1 for damaged, 1 for energized
+		 * L is the index of the DER that powers the branch if the branch is energized
+		 */
+		this.branches = [];
+		/**
+		 * Contains objects of form
+		 * { node: i, status: s, source = L }
+		 * similar to branches, but connects a resource and node
+		 */
+		this.externalBranches = [];
+		/**
+		 * Includes transmission grid and DERs
+		 * { latlng: [lat, lng], type = type }
+		 * where type is a string describing the type of DER or null for transmission grid
+		 */
+		this.resources = [];
+		this.requiredFields = ["nodes", "branches", "externalBranches", "resources"];
+		Object.assign(this, options);
+	}
 	/**
 	 * Loads the graph data, doesn't render
 	 */
-	requiredFields: ["nodes", "branches", "externalBranches", "resources"],
-	loadGraph: function(graph) {
-		Graph.requiredFields.forEach(field => {
-			Graph[field] = graph[field];
+	loadGraph(g) {
+		this.requiredFields.forEach(field => {
+			this[field] = g[field];
 		});
 		BottomRightPanel.innerHTML =
 			`<h1>Loaded new graph</h1>
 			`;
-	},
-	readFile: function readFile(event) {
+	}
+	readFile(event) {
 		var file = event.target.files[0];
 		if (!file) {
 			return;
@@ -144,21 +142,21 @@ var Graph = {
 			if(parsed.nodes && parsed.branches && parsed.externalBranches
 				&& parsed.resources) {
 				// TODO: more checks
-				Graph.loadGraph(parsed);
-				Graph.rerender();
+				this.loadGraph(parsed);
+				this.rerender();
 			} else {
 				let div = d3.create("div");
 				div.append("h1").text("Malformed File");
 				div.append("p").text("Given JSON lacks at least one of the following fields:");
 				div.append("ul").selectAll("li")
-					.data(Graph.requiredFields).join("li")
+					.data(this.requiredFields).join("li")
 					.text(d => d);
 				showModalOverlay(div.node(), { warning: true });
 			}
 		};
 		reader.readAsText(file);
-	},
-	getJson: function() {
+	}	
+	getJson() {
 		let g = {};
 		g.nodes = this.nodes.map(n => {
 			return { latlng: n.latlng }
@@ -167,40 +165,39 @@ var Graph = {
 		g.externalBranches = this.externalBranches;
 		g.resources = this.resources;
 		return JSON.stringify(g, null, 4);
-	},
-	saveFile: function(filename="graph.json") {
-		downloadData(filename, Graph.getJson());
-	},
+	}
+	saveFile(filename="graph.json") {
+		downloadData(filename, this.getJson());
+	}
 
 	/**
 	 * Event handlers
 	 */
-	nodeOnMouseOver: function (event) {
-		Graph.lastHover.type = "node";
-		Graph.lastHover.data = event.target.node;
-		Graph.lastHover.pos = event.target._latlng;
-		Graph.lastHover.hovered = true;
+	nodeOnMouseOver (event) {
+		this.lastHover.type = "node";
+		this.lastHover.data = event.target.node;
+		this.lastHover.pos = event.target._latlng;
+		this.lastHover.hovered = true;
 		event.target.setRadius(nodeRadius*1.25);
 		Tooltip.div.innerHTML =
-			`Node #${Graph.nodes.indexOf(event.target.node)} <br/>
+			`Node #${this.nodes.indexOf(event.target.node)} <br/>
 	  Lat: ${Math.round(10000*event.target._latlng.lat)/10000} <br/>
 	  Lng: ${Math.round(10000*event.target._latlng.lng)/10000}`
-		Tooltip.show();
-		Tooltip.onMouseMove(event);
-	},
-	nodeOnMouseOut: function (event) {
-		Graph.lastHover.hovered = false;
+		Tooltip.show(event.originalEvent);
+	}
+	nodeOnMouseOut (event) {
+		this.lastHover.hovered = false;
 		event.target.setRadius(nodeRadius);
 		Tooltip.hide();
-	},
-	nodeOnClick: function (event) {
+	}
+	nodeOnClick (event) {
 		let node = event.target.node;
-		if(Graph.mode == 0) Graph.nodeOnInfo(node);
-		else Graph.nodeOnEdit(node);
-	},
-	nodeOnInfo: function(node) {
+		if(this.mode == 0) this.nodeOnInfo(node);
+		else this.nodeOnEdit(node);
+	}
+	nodeOnInfo(node) {
 		BottomRightPanel.innerHTML = `
-			<h1>Node #${Graph.nodes.indexOf(node)}</h1>
+			<h1>Node #${this.nodes.indexOf(node)}</h1>
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
 			<p>Connected to ${node.branches.length} branches.</p>
@@ -208,10 +205,10 @@ var Graph = {
 		if(node.externalBranches.length>0) {
 			BottomRightPanel.innerHTML += "<p>Connected to a resource.</p>";
 		}
-	},
-	nodeOnEdit: function(node) {
+	}
+	nodeOnEdit(node) {
 		BottomRightPanel.innerHTML = `
-			<h1>Node #${Graph.nodes.indexOf(node)}</h1>
+			<h1>Node #${this.nodes.indexOf(node)}</h1>
 			<p>Connected to ${node.branches.length} branches.</p>
 			`;
 		let controls = d3.create("div");
@@ -228,15 +225,15 @@ var Graph = {
 				];
 				latInput.property("value", node.latlng[0]);
 				lngInput.property("value", node.latlng[1]);
-				Graph.rerender();
+				this.rerender();
 			});
 		BottomRightPanel.appendChild(controls.node());
-	},
-	resourceOnMouseOver: function(event) {
-		Graph.lastHover.type = "resource";
-		Graph.lastHover.data = event.target.data;
-		Graph.lastHover.pos = event.target._latlng;
-		Graph.lastHover.hovered = true;
+	}
+	resourceOnMouseOver(event) {
+		this.lastHover.type = "resource";
+		this.lastHover.data = event.target.data;
+		this.lastHover.pos = event.target._latlng;
+		this.lastHover.hovered = true;
 		let resource = event.target.data;
 		let name = resource.type ? "DER" : "Transmission Grid";
 		Tooltip.div.innerHTML =
@@ -244,15 +241,14 @@ var Graph = {
 			${resource.type ? "Type: "+resource.type+"<br/>" : ""}
 	  Lat: ${Math.round(10000*event.target._latlng.lat)/10000} <br/>
 	  Lng: ${Math.round(10000*event.target._latlng.lng)/10000}`
-		Tooltip.show();
-		Tooltip.onMouseMove(event);
-	},
-	resourceOnClick: function(event) {
+		Tooltip.show(event.originalEvent);
+	}
+	resourceOnClick(event) {
 		let resource = event.target.data;
-		if(Graph.mode == 0) Graph.resourceOnInfo(resource);
-		else Graph.resourceOnEdit(resource);
-	},
-	resourceOnInfo: function(resource) {
+		if(this.mode == 0) this.resourceOnInfo(resource);
+		else this.resourceOnEdit(resource);
+	}
+	resourceOnInfo(resource) {
 		let name = resource.type ? "DER" : "Transmission Grid";
 		BottomRightPanel.innerHTML = `
 			<h1>${name}</h1>
@@ -260,10 +256,10 @@ var Graph = {
 			<p>Lat: ${Math.round(10000*resource.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*resource.latlng[1])/10000}</p>
 			`;
-	},
-	resourceOnEdit: function(resource) {
+	}
+	resourceOnEdit(resource) {
 		BottomRightPanel.innerHTML = `
-			<h1>Resource #${Graph.resources.indexOf(resource)}</h1>
+			<h1>Resource #${this.resources.indexOf(resource)}</h1>
 			`;
 		let controls = d3.create("div");
 		let latInput = createTextInput(controls, "Lat", resource.latlng[0]);
@@ -284,19 +280,19 @@ var Graph = {
 				resource.type = type.value;
 				latInput.property("value", resource.latlng[0]);
 				lngInput.property("value", resource.latlng[1]);
-				Graph.rerender();
+				this.rerender();
 			});
 		BottomRightPanel.appendChild(controls.node());
-	},
-	resourceOnMouseOut: function(event) {
-		Graph.lastHover.hovered = false;
+	}
+	resourceOnMouseOut(event) {
+		this.lastHover.hovered = false;
 		Tooltip.hide();
-	},
-	branchOnMouseOver: function (event) {
-		Graph.lastHover.type = "branch";
-		Graph.lastHover.data = event.target.branch;
-		Graph.lastHover.pos = event.target._latlng;
-		Graph.lastHover.hovered = true;
+	}
+	branchOnMouseOver (event) {
+		this.lastHover.type = "branch";
+		this.lastHover.data = event.target.branch;
+		this.lastHover.pos = event.target._latlng;
+		this.lastHover.hovered = true;
 		event.target.setStyle({ weight: hoveredLineWeight });
 		let pf = event.target.branch.pf;
 		let status;
@@ -306,18 +302,17 @@ var Graph = {
 			default: status="Unknown"; break;
 		}
 		Tooltip.div.innerHTML =
-			`Branch #${Graph.branches.indexOf(event.target.branch)} <br/>
+			`Branch #${this.branches.indexOf(event.target.branch)} <br/>
 	  Status: ${status} <br/>
 			P<sub>f</sub>: ${pf ? pf : "Unknown"}`
-		Tooltip.show();
-		Tooltip.onMouseMove(event);
-	},
-	branchOnClick: function(event) {
+		Tooltip.show(event.originalEvent);
+	}
+	branchOnClick(event) {
 		let branch = event.target.branch;
-		if(Graph.mode == 0) Graph.branchOnInfo(branch);
-		else Graph.branchOnEdit(branch);
-	},
-	branchOnInfo: function(branch) {
+		if(this.mode == 0) this.branchOnInfo(branch);
+		else this.branchOnEdit(branch);
+	}
+	branchOnInfo(branch) {
 		let pf = branch.pf;
 		let status;
 		switch(branch.status){
@@ -326,16 +321,16 @@ var Graph = {
 			default: status="Unknown"; break;
 		}
 		BottomRightPanel.innerHTML =
-			`<h1>Branch #${Graph.branches.indexOf(branch)} </h1>
+			`<h1>Branch #${this.branches.indexOf(branch)} </h1>
 			  <p>Status: ${status}</p>
 			  <p>Connects nodes ${branch.nodes[0]} and ${branch.nodes[1]}</p>
 			  <p>Probability of Failure: ${pf ? pf : "Unknown"}</p>
 			  ${branch.status>0 ? "<p>Source: "+branch.source+"</p>" : ""}
 			`;
-	},
-	branchOnEdit: function(branch) {
+	}
+	branchOnEdit(branch) {
 		BottomRightPanel.innerHTML =
-			`<h1>Branch #${Graph.branches.indexOf(branch)} </h1>
+			`<h1>Branch #${this.branches.indexOf(branch)} </h1>
 			  <p>Connects nodes ${branch.nodes[0]} and ${branch.nodes[1]}</p>
 			`;
 		let controls = d3.create("div");
@@ -353,20 +348,20 @@ var Graph = {
 				branch.pf = Math.min(1.0, Math.max(0.0, branch.pf));
 				branch.status = status.value;
 				pfInput.property("value", branch.pf);
-				Graph.rerender();
+				this.rerender();
 			});
 		BottomRightPanel.appendChild(controls.node());
-	},
-	branchOnMouseOut: function (event) {
-		Graph.lastHover.hovered = false;
+	}
+	branchOnMouseOut (event) {
+		this.lastHover.hovered = false;
 		event.target.setStyle({ weight: lineWeight });
 		Tooltip.hide();
-	},
-	externalBranchOnMouseOver: function (event) {
-		Graph.lastHover.type = "externalBranch";
-		Graph.lastHover.data = event.target.branch;
-		Graph.lastHover.pos = event.target._latlng;
-		Graph.lastHover.hovered = true;
+	}
+	externalBranchOnMouseOver (event) {
+		this.lastHover.type = "externalBranch";
+		this.lastHover.data = event.target.branch;
+		this.lastHover.pos = event.target._latlng;
+		this.lastHover.hovered = true;
 		event.target.setStyle({ weight: hoveredLineWeight });
 		let status;
 		switch(event.target.branch.status){
@@ -375,23 +370,22 @@ var Graph = {
 			default: status="Unknown"; break;
 		}
 		Tooltip.div.innerHTML =
-			`External Branch #${Graph.externalBranches.indexOf(event.target.branch)} <br/>
+			`External Branch #${this.externalBranches.indexOf(event.target.branch)} <br/>
 	  Status: ${status}`
-		Tooltip.show();
-		Tooltip.onMouseMove(event);
-	},
-	externalBranchOnMouseOut: function (event) {
-		Graph.lastHover.hovered = false;
+		Tooltip.show(event.originalEvent);
+	}
+	externalBranchOnMouseOut (event) {
+		this.lastHover.hovered = false;
 		event.target.setStyle({ weight: lineWeight });
 		Tooltip.hide();
-	},
+	}
 
 
 	/**
-	 * Renders the Graph.nodes into new layers
+	 * Renders the this.nodes into new layers
 	 */
-	render: function (map) {
-		Graph.nodes.forEach(node => {
+	render (map) {
+		this.nodes.forEach(node => {
 			node.branches = []; // holds the branch elements displayed on map
 			node.externalBranches = []; // holds the branch elements that connect to DERs
 		});
@@ -414,9 +408,9 @@ var Graph = {
 				radius: nodeRadius
 			});
 			circle.node = node;
-			circle.on("mouseover", this.nodeOnMouseOver);
-			circle.on("mouseout", this.nodeOnMouseOut);
-			circle.on("click", this.nodeOnClick);
+			circle.on("mouseover", this.nodeOnMouseOver.bind(this));
+			circle.on("mouseout", this.nodeOnMouseOut.bind(this));
+			circle.on("click", this.nodeOnClick.bind(this));
 			circles.push(circle);
 		}
 		// add resources
@@ -425,9 +419,9 @@ var Graph = {
 			let type = resource.type ? resource.type : "tower";
 			let marker = L.marker(resource.latlng, {icon: Icons[type]});
 			marker.data = resource;
-			marker.on("mouseover", this.resourceOnMouseOver);
-			marker.on("click", this.resourceOnClick);
-			marker.on("mouseout",  this.resourceOnMouseOut);
+			marker.on("mouseover", this.resourceOnMouseOver.bind(this));
+			marker.on("click", this.resourceOnClick.bind(this));
+			marker.on("mouseout",  this.resourceOnMouseOut.bind(this));
 			resourceMarkers.push(marker);
 		}
 		// add branches
@@ -435,18 +429,18 @@ var Graph = {
 			let branch = this.branches[i];
 			let lineColor = (branch.status>0) ? energizedColor :
 				(branch.status===0) ? shadowColor : unenergizedColor;
-			let line = L.polyline( branch.nodes.map(j => Graph.nodes[j].latlng) , {
+			let line = L.polyline( branch.nodes.map(j => this.nodes[j].latlng) , {
 				color: lineColor,
 				weight: lineWeight,
 				smoothFactor: 1,
 			});
 			line.branch = branch;
-			line.on("mouseover", this.branchOnMouseOver);
-			line.on("click", this.branchOnClick);
-			line.on("mouseout", this.branchOnMouseOut);
+			line.on("mouseover", this.branchOnMouseOver.bind(this));
+			line.on("click", this.branchOnClick.bind(this));
+			line.on("mouseout", this.branchOnMouseOut.bind(this));
 			branches.push(line);
-			Graph.nodes[branch.nodes[0]].branches.push(line);
-			Graph.nodes[branch.nodes[1]].branches.push(line);
+			this.nodes[branch.nodes[0]].branches.push(line);
+			this.nodes[branch.nodes[1]].branches.push(line);
 		}
 		// add external branches
 		for(var i = 0; i<this.externalBranches.length; ++i) {
@@ -454,8 +448,8 @@ var Graph = {
 			let lineColor = (branch.status>0) ? energizedColor :
 				(branch.status===0) ? shadowColor : unenergizedColor;
 			let line = L.polyline( [ //coordinates
-				Graph.resources[branch.source].latlng,
-				Graph.nodes[branch.node].latlng
+				this.resources[branch.source].latlng,
+				this.nodes[branch.node].latlng
 			], {
 				color: lineColor,
 				weight: lineWeight,
@@ -463,47 +457,47 @@ var Graph = {
 			});
 			// rename to externalBranch?
 			line.branch = branch;
-			line.on("mouseover", this.externalBranchOnMouseOver);
-			line.on("mouseout", this.externalBranchOnMouseOut);
+			line.on("mouseover", this.externalBranchOnMouseOver.bind(this));
+			line.on("mouseout", this.externalBranchOnMouseOut.bind(this));
 			externalBranches.push(line);
-			Graph.nodes[branch.node].externalBranches.push(line);
+			this.nodes[branch.node].externalBranches.push(line);
 		}
-		Graph.markerLayer = L.layerGroup(markers);
-		Graph.resourceLayer = L.layerGroup(resourceMarkers);
-		Graph.circleLayer = L.layerGroup(circles);
-		Graph.branchLayer = L.layerGroup(branches);
-		Graph.externalBranchLayer = L.layerGroup(externalBranches);
+		this.markerLayer = L.layerGroup(markers);
+		this.resourceLayer = L.layerGroup(resourceMarkers);
+		this.circleLayer = L.layerGroup(circles);
+		this.branchLayer = L.layerGroup(branches);
+		this.externalBranchLayer = L.layerGroup(externalBranches);
 
 		this.map = map;
-		Graph.branchLayer.addTo(map);
-		Graph.externalBranchLayer.addTo(map);
-		Graph.circleLayer.addTo(map);
-		Graph.resourceLayer.addTo(map);
-	},
+		this.branchLayer.addTo(map);
+		this.externalBranchLayer.addTo(map);
+		this.circleLayer.addTo(map);
+		this.resourceLayer.addTo(map);
+	}
 	/**
 	 * Generates a random system with len nodes.
 	 * For testing purposes.
 	 */
-	generateRandom: function (len) {
+	generateRandom (len) {
 		const variety = 0.01;
 		let lat = 41;
 		let lng = 29.045;
-		Graph.nodes = [];
-		Graph.branches = [];
+		this.nodes = [];
+		this.branches = [];
 		for(var i =0; i<len; ++i) {
 			lat += (Math.random()*variety)-(variety/2);
 			lng += (Math.random()*variety)-(variety/2);
 			let node = { latlng: [lat,lng] };
 			if(i>0) {
-				Graph.branches.push({
+				this.branches.push({
 					nodes: [i-1, i],
 					status: (Math.random() < 0.2) ? -1 : (Math.random() < 0.5) ? 0 : 1
 				});
 			}
-			Graph.nodes.push(node);
+			this.nodes.push(node);
 		}
-	},
-	setMode: function(mode) {
+	}
+	setMode(mode) {
 		if(this.mode == mode) return;
 		this.mode = mode;
 		if(this.mode == 1) {
@@ -516,23 +510,23 @@ var Graph = {
 				.text("Load");
 			topbar.append("input").attr("id", "fileInput")
 				.attr("type", "file")
-				.node().addEventListener("change", Graph.readFile, false);
+				.node().addEventListener("change", this.readFile, false);
 
 			topbar.append("div").classed("blockButton", true)
 				.classed("alt", true)
 				.text("Save")
 				.on("click", function() {
-					Graph.saveFile();
+					this.saveFile();
 				});
 			topbar.append("div").classed("blockButton", true)
 				.classed("alt", true)
 				.text("Clear")
 				.on("click", function() {
-					Graph.nodes = [];
-					Graph.branches = [];
-					Graph.externalBranches = [];
-					Graph.resources = [];
-					Graph.rerender();
+					this.nodes = [];
+					this.branches = [];
+					this.externalBranches = [];
+					this.resources = [];
+					this.rerender();
 				});
 			topbar.style("transform", "translate(0, -53px)")
 				.transition().duration(1000)
@@ -557,16 +551,16 @@ var Graph = {
 			`<h1>Normal Mode</h1>
 			`;
 		}
-	},
-	addBranch: function(source, target) {
+	}
+	addBranch(source, target) {
 		let i0 = this.nodes.indexOf(source);
 		let i1 = this.nodes.indexOf(target);
 		this.branches.push({
 			nodes: [i0, i1],
 			status: 0,
 		});
-	},
-	addExternalBranch: function(source, target) {
+	}
+	addExternalBranch(source, target) {
 		let i0 = this.resources.indexOf(source);
 		let i1 = this.nodes.indexOf(target);
 		this.externalBranches.push({
@@ -574,14 +568,14 @@ var Graph = {
 			node: i1,
 			status: 1,
 		});
-	},
-	addNode: function(position) {
+	}
+	addNode(position) {
 		let newNode = {
 			"latlng": position
 		}
 		this.nodes.push(newNode);
-	},
-	removeElement: function(victim) {
+	}
+	removeElement(victim) {
 		let i;
 		let data = victim.data;
 		switch(victim.type) {
@@ -635,8 +629,8 @@ var Graph = {
 				return false;
 		}
 		
-	},
-	handleKeyDown: function(event) {
+	}
+	handleKeyDown(event) {
 		if(this.mode == 1) {
 			switch(event.key) {
 				case "a":
@@ -708,28 +702,28 @@ var Graph = {
 					break;
 			}
 		}
-	},
-	rerender: function() {
-		Graph.markerLayer.remove();
-		Graph.resourceLayer.remove();
-		Graph.circleLayer.remove();
-		Graph.branchLayer.remove();
-		Graph.externalBranchLayer.remove();
+	}
+	rerender() {
+		this.markerLayer.remove();
+		this.resourceLayer.remove();
+		this.circleLayer.remove();
+		this.branchLayer.remove();
+		this.externalBranchLayer.remove();
 		this.render(Map);
-	},
-	contextMenu: function(event) {
+	}
+	contextMenu(event) {
 		if(this.mode == 0) this.normalContextMenu(event);
 		else this.editContextMenu(event);
-	},
-	normalContextMenu: function(event) {
+	}
+	normalContextMenu(event) {
 		let menu = d3.select("#ContextMenu").html("");
 		menu.append("div")
 			.text("Switch to Edit Mode")
 			.on("click", () => {
 				this.setMode(1);
 			});
-	},
-	editContextMenu: function(event) {
+	}
+	editContextMenu(event) {
 		let position = [event.latlng.lat, event.latlng.lng];
 		let menu = d3.select("#ContextMenu").html("");
 		if(this.lastHover.hovered) {
@@ -770,20 +764,22 @@ var Graph = {
 			.on("click", () => {
 				this.setMode(0);
 			});
-	},
-}; //end Graph
+	}
+} //end Graph
 
 
 window.addEventListener("keydown", function(event) {
 	switch(event.key){
 		case "F1":
-			Graph.setMode(0);
+			graph.setMode(0);
 			break;
 		case "F2":
-			Graph.setMode(1);
+			graph.setMode(1);
 			break;
 		default:
-			Graph.handleKeyDown(event);
+			graph.handleKeyDown(event);
 			break;
 	}
 });
+
+

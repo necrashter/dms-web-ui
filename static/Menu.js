@@ -49,7 +49,7 @@ function statsButton() {
 	box1.append("h1").text("Branch Status");
 	var labels = ["Damaged", "Unknown", "Energized"];
 	var data = [0, 0, 0];
-	Graph.branches.forEach(branch => {
+	graph.branches.forEach(branch => {
 		data[branch.status+1] += 1;
 	});
 	let width = box1.node().getBoundingClientRect().width;
@@ -75,7 +75,7 @@ function statsButton() {
 			keys.push(name);
 			data[name] = 0;
 		}
-		Graph.branches.forEach(branch => {
+		graph.branches.forEach(branch => {
 			if(isNaN(branch.pf)) {
 				data["Unknown"] += 1;
 			} else {

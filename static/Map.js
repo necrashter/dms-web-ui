@@ -95,7 +95,7 @@ Map.on('click', event => {
 
 Map.on("contextmenu", event => {
 	console.log("contextmenu")
-	Graph.contextMenu(event);
+	graph.contextMenu(event);
 	ContextMenu.toggle(event.originalEvent);
 	event.originalEvent.preventDefault();
 });

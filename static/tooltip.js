@@ -11,9 +11,13 @@ var Tooltip = {
 		Tooltip.div.style.left = event.clientX+10 +"px";
 		Tooltip.div.style.top = event.clientY+10 + "px";
 	},
-	show: function () {
+	show: function (event) {
 		Tooltip.hidden = false;
 		Tooltip.div.classList.remove("hidden");
+		if(event) {
+			Tooltip.div.style.left = event.clientX+10 +"px";
+			Tooltip.div.style.top = event.clientY+10 + "px";
+		}
 	},
 	hide: function () {
 		Tooltip.hidden = true;

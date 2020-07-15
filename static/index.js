@@ -431,10 +431,12 @@ fallbackGraph = {
     ]
 }
 
+var graph = new Graph();
+
 function loadJsonFromServer(filename) {
 	Server.get(filename).then(response => {
-		Graph.loadGraph(JSON.parse(response));
-		Graph.render(Map);
+		graph.loadGraph(JSON.parse(response));
+		graph.render(Map);
 	}).catch(error => {
 		alert("Failed to get graph data from server:\n"+error);
 	});
@@ -444,12 +446,12 @@ function loadJsonFromServer(filename) {
 
 Server.get("sample.json").then(response => {
 	console.log("loaded sample.json from server");
-	Graph.loadGraph(JSON.parse(response));
-	Graph.render(Map);
+	graph.loadGraph(JSON.parse(response));
+	graph.render(Map);
 }).catch(error => {
 	console.error("Failed to get graph data from server:\n"+error);
-	Graph.loadGraph(fallbackGraph);
-	Graph.render(Map);
+	graph.loadGraph(fallbackGraph);
+	graph.render(Map);
 });
 /*
 Server.get("/getJsons").then(response => {
