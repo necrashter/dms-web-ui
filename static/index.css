@@ -50,8 +50,13 @@ html, body {
 	padding: 1em;
 	margin: 0.5em;
 	clip-path: polygon(30px 0, 100% 0px, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px);
+	transition: visibility 0.25s, opacity 0.25s;
 }
 
+#BottomRightPanel.hidden {
+	visibility: hidden;
+	opacity: 0;
+}
 #BottomRightPanel > * {
 	margin: 0;
 }
@@ -251,7 +256,6 @@ h2 {
 	border: 0.15em solid var(--blue-border);
 	padding: 0.6em 1.2em;
 	margin: 0.2em;
-	font-family: monospace;
 	cursor: pointer;
 	text-align: center;
 }
@@ -314,7 +318,8 @@ button:hover {
 	top: 3em;
 	z-index: 600;
 	position: absolute;
-	font-size: 2em;
+	font-size: 1.5em;
+	font-family: Orbitron;
 }
 
 
@@ -418,7 +423,6 @@ button:hover {
 	right: 0;
 	margin: 0 auto;
 	display: flex;
-	font-size: 1.5em;
 }
 
 #TopBar > * {
@@ -482,3 +486,29 @@ input[type="text"] {
 	text-shadow: none;
     color: gray;
 }
+
+
+.selectList {
+	border: 0.15em solid var(--blue-border);
+	margin: 2em 0em;
+	background: black;
+}
+
+.selectList > div {
+	padding: 0.1em 0.5em;
+	cursor: pointer;
+}
+.selectList > .currentIndex::before {
+	content: "▶ ";
+}
+.selectList > div:hover {
+	background: var(--reverse-blue-bg);
+	color: var(--reverse-blue-fg);
+}
+
+.policyControls {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+}
+

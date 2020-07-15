@@ -90,7 +90,6 @@ Map.on('mousemove', (event) => {
 
 Map.on('click', event => {
 	// NOTE: This fires even if user clicks on a marker
-	//resetBottomRightPanel();
 	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
 	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
 	console.log("{ \"latlng\": [",lat,",",lng,"]}");
@@ -102,6 +101,12 @@ Map.on("contextmenu", event => {
 	ContextMenu.toggle(event.originalEvent);
 	event.originalEvent.preventDefault();
 });
+
+Map.createPane("nodes");
+Map.getPane('nodes').style.zIndex = 650;
+Map.createPane("branches");
+Map.getPane('branches').style.zIndex = 250;
+//Map.getPane('branches').style.pointerEvents = "none";
 
 // this function can be used to add some layers
 // depending on the zoom level

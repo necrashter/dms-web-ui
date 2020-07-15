@@ -8,7 +8,7 @@ const nodeRadius = 6;
 
 const shadowColor = "#574f7d";
 
-const antPathDashArray = [2, 22];
+const antPathDashArray = [2, 40];
 const antPathDelay = 700;
 
 var Icons = {};
@@ -125,7 +125,7 @@ class Graph {
 				console.log("Warning: field not found in graph:", field);
 			}
 		});
-		BottomRightPanel.innerHTML = `<h1>Loaded new graph</h1> `;
+		BottomRightPanel.classList.add("hidden");
 		if(g.view && g.zoom) {
 			this.map.flyTo(g.view, g.zoom);
 		}
@@ -242,6 +242,7 @@ class Graph {
 			case 1: status="Energized"; break;
 			default: status="Unknown"; break;
 		}
+		BottomRightPanel.classList.remove("hidden");
 		BottomRightPanel.innerHTML = `
 			<h1>Node #${this.nodes.indexOf(node)}</h1>
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
@@ -256,6 +257,7 @@ class Graph {
 	}
 	nodeOnEdit(event) {
 		let node = event.target.node;
+		BottomRightPanel.classList.remove("hidden");
 		BottomRightPanel.innerHTML = `
 			<h1>Node #${this.nodes.indexOf(node)}</h1>
 			<p>Connected to ${node.branches.length} branches.</p>
@@ -311,6 +313,7 @@ class Graph {
 	resourceOnInfo(event) {
 		let resource = event.target.data;
 		let name = resource.type ? "DER" : "Transmission Grid";
+		BottomRightPanel.classList.remove("hidden");
 		BottomRightPanel.innerHTML = `
 			<h1>${name}</h1>
 			${resource.type ? "<p>Type: "+resource.type+"</p>" : ""}
@@ -320,6 +323,7 @@ class Graph {
 	}
 	resourceOnEdit(event) {
 		let resource = event.target.data;
+		BottomRightPanel.classList.remove("hidden");
 		BottomRightPanel.innerHTML = `
 			<h1>Resource #${this.resources.indexOf(resource)}</h1>
 			`;
@@ -371,6 +375,7 @@ class Graph {
 	}
 	branchOnInfo(event) {
 		let branch = event.target.branch;
+		BottomRightPanel.classList.remove("hidden");
 		BottomRightPanel.innerHTML =
 			`<h1>Branch #${this.branches.indexOf(branch)} </h1>
 			  <p>Connects nodes ${branch.nodes[0]} and ${branch.nodes[1]}</p>
@@ -378,6 +383,7 @@ class Graph {
 	}
 	branchOnEdit(event) {
 		let branch = event.target.branch;
+		BottomRightPanel.classList.remove("hidden");
 		BottomRightPanel.innerHTML =
 			`<h1>Branch #${this.branches.indexOf(branch)} </h1>
 			  <p>Connects nodes ${branch.nodes[0]} and ${branch.nodes[1]}</p>
@@ -425,8 +431,10 @@ class Graph {
 	 */
 	render (map) {
 		this.nodes.forEach(node => {
-			node.branches = []; // holds the branch elements displayed on map
-			node.externalBranches = []; // holds the branch elements that connect to DERs
+			// holds the branch elements displayed on map
+			node.branches = [];
+			// holds the branch elements that connect to DERs
+			node.externalBranches = [];
 		});
 		var markers = [];
 		var circles = [];
@@ -445,7 +453,8 @@ class Graph {
 				color: color,
 				fillColor: color,
 				fillOpacity: 1.0,
-				radius: nodeRadius
+				radius: nodeRadius,
+				pane: "nodes",
 			});
 			circle.node = node;
 			circle.on("mouseover", this.nodeOnMouseOver.bind(this));
@@ -457,7 +466,10 @@ class Graph {
 		for(var i = 0; i<this.resources.length; ++i) {
 			let resource = this.resources[i];
 			let type = resource.type ? resource.type : "tower";
-			let marker = L.marker(resource.latlng, {icon: Icons[type]});
+			let marker = L.marker(resource.latlng, {
+				icon: Icons[type],
+				pane: "nodes",
+			});
 			marker.data = resource;
 			marker.on("mouseover", this.resourceOnMouseOver.bind(this));
 			marker.on("click", this.resourceOnClick.bind(this));
@@ -480,13 +492,15 @@ class Graph {
 					smoothFactor: 1,
 					paused: false,
 					reversed: false,
-					"hardwareAccelerated": true
+					"hardwareAccelerated": true,
+					pane: "branches",
 				});
 			} else {
 				line = L.polyline(route, {
 					color: shadowColor,
 					weight: lineWeight,
 					smoothFactor: 1,
+					pane: "branches",
 				});
 			}
 			line.branch = branch;
@@ -589,6 +603,7 @@ class Graph {
 				.style("transform", "translate(0, 0)");
 			this.topbar = topbar;
 			HUD.appendChild(topbar.node());
+			BottomRightPanel.classList.remove("hidden");
 			BottomRightPanel.innerHTML =
 			`<h1>Edit Mode</h1>
 			  <p>a: add node</p>
@@ -603,9 +618,7 @@ class Graph {
 			topbar.transition().duration(1000)
 				.style("transform", "translate(0, -53px)")
 				.on("end", () => { topbar.remove(); });
-			BottomRightPanel.innerHTML =
-			`<h1>Normal Mode</h1>
-			`;
+			BottomRightPanel.classList.add("hidden");
 		}
 		this.setEventHandlers(mode);
 		this.rerender();
@@ -765,11 +778,26 @@ class Graph {
 	 * Renders the graph. If it is already rendered, clears before rendering.
 	 */
 	rerender() {
-		if(this.markerLayer) this.markerLayer.remove();
-		if(this.resourceLayer) this.resourceLayer.remove();
-		if(this.circleLayer) this.circleLayer.remove();
-		if(this.branchLayer) this.branchLayer.remove();
-		if(this.externalBranchLayer) this.externalBranchLayer.remove();
+		if(this.markerLayer) {
+			this.markerLayer.clearLayers();
+			this.markerLayer.remove();
+		}
+		if(this.resourceLayer) {
+			this.resourceLayer.clearLayers();
+			this.resourceLayer.remove();
+		}
+		if(this.circleLayer) {
+			this.circleLayer.clearLayers();
+			this.circleLayer.remove();
+		}
+		if(this.branchLayer) {
+			this.branchLayer.clearLayers();
+			this.branchLayer.remove();
+		}
+		if(this.externalBranchLayer) {
+			this.externalBranchLayer.clearLayers();
+			this.externalBranchLayer.remove();
+		}
 		this.render(this.map);
 	}
 	contextMenu(event) {

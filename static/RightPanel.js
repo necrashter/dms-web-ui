@@ -1,18 +1,21 @@
 
 var policyView = null;
 
-function selectGraph(choices) {
+function selectGraph(choices, prebody=null) {
 	let content = d3.select("#RightPanelContent").html("");
 	let header = content.append("h1").text("1. Load Graph");
-	let body = content.append("div");
+	let body = content.append("div").style("overflow", "hidden");
+	if(prebody) body.call(prebody);
 	body.append("p").text("Select a graph to load: ");
-	body.selectAll("div").data(choices).join("div")
-		.classed("blockButton", true)
+	let list = body.append("div").classed("selectList", true);
+	list.selectAll("div").data(choices).join("div")
+		//.classed("blockButton", true)
 		.text(d => d.name)
 		.on("click", d => {
 			d.load();
 			header.classed("disabled", true);
-			body.html("");
+			body.transition().duration(600).style("height", "0")
+				.on("end", () => body.html(""));
 			content.append("h1").text("2. Synthesize Policy");
 			policyView = new PolicyView(graph, content.append("div"));
 		});
@@ -29,9 +32,13 @@ class PolicyView {
 		this.selectPolicyView();
 	}
 	selectPolicyView() {
-		this.div.html("")
-			.append("div").classed("blockButton", true)
-			.text("Basic Policy")
+		this.div.html("");
+		this.div.append("p")
+			.text(`Currently this cannot generate a proper solution,
+				but it can synthesize a trivial policy where every 
+				unknown node is energized in order.`);
+		this.div.append("div").classed("blockButton", true)
+			.text("Synthesize Trivial Policy")
 			.on("click", this.createTrivialPolicy.bind(this));
 	}
 	createTrivialPolicy() {
@@ -42,6 +49,7 @@ class PolicyView {
 			if(node.status == 0) this.policy.push(i);
 		});
 		this.policyIndex = 0;
+		this.infoText = "A trivial policy has been generated.";
 		this.policyNavigator();
 	}
 	goToPolicyStep(index) {
@@ -62,9 +70,14 @@ class PolicyView {
 	}
 	policyNavigator() {
 		this.div.html("");
-		let prev = this.div.append("div").classed("blockButton", true)
+		if(this.infoText) this.div.append("p").text(this.infoText);
+		this.div.append("p")
+			.text(`You can use the buttons or 
+				click on a step to jump directly to it.`);
+		let buttonDiv = this.div.append("div").classed("policyControls", true);
+		let prev = buttonDiv.append("div").classed("blockButton", true)
 			.text("Previous Step");
-		let next = this.div.append("div").classed("blockButton", true)
+		let next = buttonDiv.append("div").classed("blockButton", true)
 			.text("Next Step");
 		if(this.policyIndex>0) {
 			prev.on("click", () => {
@@ -80,16 +93,25 @@ class PolicyView {
 		} else {
 			next.classed("disabled", true);
 		}
-		let list = this.div.append("div");
-		list.selectAll("div").data(this.policy).join("div")
+		// lists policy steps
+		let stepList = this.div.append("div").classed("selectList", true);
+		stepList.selectAll("div").data(this.policy).join("div")
 			.text(d => {
 				if(d==null) return "Initial Status";
 				else return "Activate Node #"+d;
 			})
-			.attr("class", (d, i) => {
+			.attr("class", (_, i) => {
 				if(i > this.policyIndex) return "disabled";
 				else if(i == this.policyIndex) return "currentIndex";
 				else return "";
+			})
+			.on("click", (_, i) => {
+				this.goToPolicyStep(i);
 			});
+		if(this.policyIndex == this.policy.length-1) {
+			this.div.append("h2").text("Congratulations!");
+			this.div.append("p")
+				.text("You have reached the end of the policy.");
+		}
 	}
 }

@@ -224,14 +224,27 @@ Server.get("restorer.json").then(response => {
 });
 */
 
-/*
-Server.get("/getJsons").then(response => {
-	console.log(response);
+Server.get("/getGraphs").then(response => {
+	let fileList = JSON.parse(response);
+	console.log(fileList);
+	selectGraph( fileList.map(filename => {
+		return {
+			name: filename,
+			load: () => loadJsonFromServer("graphs/"+filename)
+		};
+	})
+	);
+}).catch(error => {
+	selectGraph([
+		{name: "Test Graph",
+			load: () => graph.loadGraph(fallbackGraph)}
+	], div => {
+		div.append("p")
+			.text("Failed to get graph list from server: "+error.message)
+			.style("color", "red");
+		div.append("p")
+			.text("You can load a built-in graph.")
+	});
 });
-*/
 
 
-selectGraph([
-	{name: "Test Graph",
-		load: () => graph.loadGraph(fallbackGraph)}
-]);
