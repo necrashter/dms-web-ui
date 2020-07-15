@@ -2,7 +2,10 @@ const Map = L.map('map', {
 	preferCanvas: true, // improves performance
 	attributionControl: false,
 	zoomControl: false
-}).setView([40.99,29.03], 13);
+}).setView(
+	{ lat: 41.059420776730676, lng: 29.068107604980472 },
+	11
+);
 
 const OpenStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 	maxZoom: 19,
@@ -79,7 +82,7 @@ Map.on('mousemove', (event) => {
 	Map.mousePos = [event.latlng.lat, event.latlng.lng];
 	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
 	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
-	latdiv.innerHTML = "Lat: " + lat + "<br/>Lng: " + lng;
+	latdiv.innerHTML = lat + ", " + lng;
 	// Pass the originalEvent
 	//Tooltip.onMouseMove(event.originalEvent);
 });

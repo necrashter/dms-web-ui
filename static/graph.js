@@ -8,6 +8,9 @@ const nodeRadius = 6;
 
 const shadowColor = "#574f7d";
 
+const antPathDashArray = [2, 22];
+const antPathDelay = 700;
+
 var Icons = {};
 
 const IconSize = [50, 50];
@@ -71,7 +74,8 @@ function createSelectBox(target, data, name, value) {
 }
 
 class Graph {
-	constructor(options) {
+	constructor(map, options) {
+		this.map = map;
 		/**
 		 * 0 = normal mode
 		 * 1 = edit mode
@@ -108,17 +112,24 @@ class Graph {
 		this.resources = [];
 		this.requiredFields = ["nodes", "branches", "externalBranches", "resources"];
 		Object.assign(this, options);
+		this.setEventHandlers();
 	}
 	/**
 	 * Loads the graph data, doesn't render
 	 */
 	loadGraph(g) {
 		this.requiredFields.forEach(field => {
-			this[field] = g[field];
+			if(g[field]) {
+				this[field] = g[field];
+			} else {
+				console.log("Warning: field not found in graph:", field);
+			}
 		});
-		BottomRightPanel.innerHTML =
-			`<h1>Loaded new graph</h1>
-			`;
+		BottomRightPanel.innerHTML = `<h1>Loaded new graph</h1> `;
+		if(g.view && g.zoom) {
+			this.map.flyTo(g.view, g.zoom);
+		}
+		this.rerender();
 	}
 	readFile(event) {
 		var file = event.target.files[0];
@@ -159,11 +170,21 @@ class Graph {
 	getJson() {
 		let g = {};
 		g.nodes = this.nodes.map(n => {
-			return { latlng: n.latlng }
+			return {
+				latlng: n.latlng,
+				pf: n.pf ? n.pf : null,
+				status: n.status ? n.status : 0
+			};
 		});
-		g.branches = this.branches;
+		g.branches = this.branches.map(b => {
+			return {
+				nodes: b.nodes,
+			};
+		});
 		g.externalBranches = this.externalBranches;
 		g.resources = this.resources;
+		g.view = this.map.getCenter();
+		g.zoom = this.map.getZoom();
 		return JSON.stringify(g, null, 4);
 	}
 	saveFile(filename="graph.json") {
@@ -173,16 +194,38 @@ class Graph {
 	/**
 	 * Event handlers
 	 */
+	setEventHandlers(mode=0) {
+		if(mode == 0) {
+			this.nodeOnClick = this.nodeOnInfo;
+			this.branchOnClick = this.branchOnInfo;
+			this.resourceOnClick = this.branchOnInfo;
+		} else {
+			this.nodeOnClick = this.nodeOnEdit;
+			this.branchOnClick = this.branchOnEdit;
+			this.resourceOnClick = this.branchOnEdit;
+		}
+	}
 	nodeOnMouseOver (event) {
 		this.lastHover.type = "node";
 		this.lastHover.data = event.target.node;
 		this.lastHover.pos = event.target._latlng;
 		this.lastHover.hovered = true;
 		event.target.setRadius(nodeRadius*1.25);
+		let node = event.target.node;
+		let pf = node.pf;
+		let status;
+		switch(node.status){
+			case -1: status="Damaged"; break;
+			case 1: status="Energized"; break;
+			default: status="Unknown"; break;
+		}
+		// Lat: ${Math.round(10000*event.target._latlng.lat)/10000} <br/>
+		// Lng: ${Math.round(10000*event.target._latlng.lng)/10000}
 		Tooltip.div.innerHTML =
-			`Node #${this.nodes.indexOf(event.target.node)} <br/>
-	  Lat: ${Math.round(10000*event.target._latlng.lat)/10000} <br/>
-	  Lng: ${Math.round(10000*event.target._latlng.lng)/10000}`
+			`Node #${this.nodes.indexOf(node)} <br/>
+			  Status: ${status} <br/>
+			P<sub>f</sub>: ${pf ? pf : "Unknown"}
+		`;
 		Tooltip.show(event.originalEvent);
 	}
 	nodeOnMouseOut (event) {
@@ -190,23 +233,29 @@ class Graph {
 		event.target.setRadius(nodeRadius);
 		Tooltip.hide();
 	}
-	nodeOnClick (event) {
+	nodeOnInfo(event) {
 		let node = event.target.node;
-		if(this.mode == 0) this.nodeOnInfo(node);
-		else this.nodeOnEdit(node);
-	}
-	nodeOnInfo(node) {
+		let pf = node.pf;
+		let status;
+		switch(node.status){
+			case -1: status="Damaged"; break;
+			case 1: status="Energized"; break;
+			default: status="Unknown"; break;
+		}
 		BottomRightPanel.innerHTML = `
 			<h1>Node #${this.nodes.indexOf(node)}</h1>
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
+			<p>Status: ${status}</p>
+			<p>Probability of Failure: ${pf ? pf : "Unknown"}</p>
 			<p>Connected to ${node.branches.length} branches.</p>
 			`;
 		if(node.externalBranches.length>0) {
 			BottomRightPanel.innerHTML += "<p>Connected to a resource.</p>";
 		}
 	}
-	nodeOnEdit(node) {
+	nodeOnEdit(event) {
+		let node = event.target.node;
 		BottomRightPanel.innerHTML = `
 			<h1>Node #${this.nodes.indexOf(node)}</h1>
 			<p>Connected to ${node.branches.length} branches.</p>
@@ -214,6 +263,13 @@ class Graph {
 		let controls = d3.create("div");
 		let latInput = createTextInput(controls, "Lat", node.latlng[0]);
 		let lngInput = createTextInput(controls, "Lng", node.latlng[1]);
+		let status = createSelectBox(controls,[
+			{name: "Damaged", value: -1},
+			{name: "Unknown", value: 0},
+			{name: "Energized", value: 1},
+		], "status", node.status ? node.status : 0);
+		let pfInput = createTextInput(controls, "Probability of Failure", 
+			node.pf ? node.pf : "Unknown");
 		controls.append("div").classed("blockButton", true)
 			.text("OK")
 			.on("click", () => {
@@ -225,6 +281,15 @@ class Graph {
 				];
 				latInput.property("value", node.latlng[0]);
 				lngInput.property("value", node.latlng[1]);
+				let pf = parseFloat(pfInput.property("value"));
+				if(isNaN(pf)) {
+					node.pf = null;
+					pfInput.property("value", "Unknown");
+				} else {
+					node.pf = Math.min(1.0, Math.max(0.0, pf));
+					pfInput.property("value", node.pf);
+				}
+				node.status = status.value;
 				this.rerender();
 			});
 		BottomRightPanel.appendChild(controls.node());
@@ -243,12 +308,8 @@ class Graph {
 	  Lng: ${Math.round(10000*event.target._latlng.lng)/10000}`
 		Tooltip.show(event.originalEvent);
 	}
-	resourceOnClick(event) {
+	resourceOnInfo(event) {
 		let resource = event.target.data;
-		if(this.mode == 0) this.resourceOnInfo(resource);
-		else this.resourceOnEdit(resource);
-	}
-	resourceOnInfo(resource) {
 		let name = resource.type ? "DER" : "Transmission Grid";
 		BottomRightPanel.innerHTML = `
 			<h1>${name}</h1>
@@ -257,7 +318,8 @@ class Graph {
 			<p>Lng: ${Math.round(10000*resource.latlng[1])/10000}</p>
 			`;
 	}
-	resourceOnEdit(resource) {
+	resourceOnEdit(event) {
+		let resource = event.target.data;
 		BottomRightPanel.innerHTML = `
 			<h1>Resource #${this.resources.indexOf(resource)}</h1>
 			`;
@@ -294,60 +356,37 @@ class Graph {
 		this.lastHover.pos = event.target._latlng;
 		this.lastHover.hovered = true;
 		event.target.setStyle({ weight: hoveredLineWeight });
-		let pf = event.target.branch.pf;
+		/*
 		let status;
 		switch(event.target.branch.status){
 			case -1: status="Damaged"; break;
 			case 1: status="Energized"; break;
 			default: status="Unknown"; break;
 		}
+		*/
 		Tooltip.div.innerHTML =
 			`Branch #${this.branches.indexOf(event.target.branch)} <br/>
-	  Status: ${status} <br/>
-			P<sub>f</sub>: ${pf ? pf : "Unknown"}`
+		`;
 		Tooltip.show(event.originalEvent);
 	}
-	branchOnClick(event) {
+	branchOnInfo(event) {
 		let branch = event.target.branch;
-		if(this.mode == 0) this.branchOnInfo(branch);
-		else this.branchOnEdit(branch);
-	}
-	branchOnInfo(branch) {
-		let pf = branch.pf;
-		let status;
-		switch(branch.status){
-			case -1: status="Damaged"; break;
-			case 1: status="Energized"; break;
-			default: status="Unknown"; break;
-		}
 		BottomRightPanel.innerHTML =
 			`<h1>Branch #${this.branches.indexOf(branch)} </h1>
-			  <p>Status: ${status}</p>
 			  <p>Connects nodes ${branch.nodes[0]} and ${branch.nodes[1]}</p>
-			  <p>Probability of Failure: ${pf ? pf : "Unknown"}</p>
-			  ${branch.status>0 ? "<p>Source: "+branch.source+"</p>" : ""}
 			`;
 	}
-	branchOnEdit(branch) {
+	branchOnEdit(event) {
+		let branch = event.target.branch;
 		BottomRightPanel.innerHTML =
 			`<h1>Branch #${this.branches.indexOf(branch)} </h1>
 			  <p>Connects nodes ${branch.nodes[0]} and ${branch.nodes[1]}</p>
 			`;
 		let controls = d3.create("div");
-		let status = createSelectBox(controls,[
-			{name: "Damaged", value: -1},
-			{name: "Unknown", value: 0},
-			{name: "Energized", value: 1},
-		], "status", branch.status);
-		let pfInput = createTextInput(controls, "Probability of Failure", branch.pf);
 		controls.append("div").classed("blockButton", true)
-			.text("OK")
+			.text("Reverse")
 			.on("click", () => {
-				let pf = parseFloat(pfInput.property("value"));
-				branch.pf = isNaN(pf) ? branch.pf : pf;
-				branch.pf = Math.min(1.0, Math.max(0.0, branch.pf));
-				branch.status = status.value;
-				pfInput.property("value", branch.pf);
+				branch.nodes.reverse();
 				this.rerender();
 			});
 		BottomRightPanel.appendChild(controls.node());
@@ -398,7 +437,8 @@ class Graph {
 		for(var i = 0; i<this.nodes.length; ++i) {
 			let node = this.nodes[i];
 			let latlng = node.latlng;
-			let color = shadowColor;
+			let color = (node.status>0) ? energizedColor :
+				(node.status<0) ? unenergizedColor : shadowColor;
 
 			//markers.push(L.marker(latlng, {icon: testIcon}));
 			let circle = L.circleMarker(latlng, {
@@ -427,13 +467,28 @@ class Graph {
 		// add branches
 		for(var i = 0; i<this.branches.length; ++i) {
 			let branch = this.branches[i];
-			let lineColor = (branch.status>0) ? energizedColor :
-				(branch.status===0) ? shadowColor : unenergizedColor;
-			let line = L.polyline( branch.nodes.map(j => this.nodes[j].latlng) , {
-				color: lineColor,
-				weight: lineWeight,
-				smoothFactor: 1,
-			});
+			let route = branch.nodes.map(j => this.nodes[j].latlng);
+			let line;
+			if ( this.nodes[branch.nodes[0]].status > 0 &&
+					this.nodes[branch.nodes[1]].status > 0) {
+				line = L.polyline.antPath(route, {
+					delay: antPathDelay,
+					dashArray: antPathDashArray,
+					color: energizedColor,
+					pulseColor: "#FFFFFF",
+					weight: lineWeight,
+					smoothFactor: 1,
+					paused: false,
+					reversed: false,
+					"hardwareAccelerated": true
+				});
+			} else {
+				line = L.polyline(route, {
+					color: shadowColor,
+					weight: lineWeight,
+					smoothFactor: 1,
+				});
+			}
 			line.branch = branch;
 			line.on("mouseover", this.branchOnMouseOver.bind(this));
 			line.on("click", this.branchOnClick.bind(this));
@@ -510,18 +565,19 @@ class Graph {
 				.text("Load");
 			topbar.append("input").attr("id", "fileInput")
 				.attr("type", "file")
-				.node().addEventListener("change", this.readFile, false);
+				.node()
+				.addEventListener("change", this.readFile.bind(this), false);
 
 			topbar.append("div").classed("blockButton", true)
 				.classed("alt", true)
 				.text("Save")
-				.on("click", function() {
+				.on("click", () => {
 					this.saveFile();
 				});
 			topbar.append("div").classed("blockButton", true)
 				.classed("alt", true)
 				.text("Clear")
-				.on("click", function() {
+				.on("click", () => {
 					this.nodes = [];
 					this.branches = [];
 					this.externalBranches = [];
@@ -551,6 +607,8 @@ class Graph {
 			`<h1>Normal Mode</h1>
 			`;
 		}
+		this.setEventHandlers(mode);
+		this.rerender();
 	}
 	addBranch(source, target) {
 		let i0 = this.nodes.indexOf(source);
@@ -634,8 +692,8 @@ class Graph {
 		if(this.mode == 1) {
 			switch(event.key) {
 				case "a":
-					if(!Map.mousePos) return;
-					this.addNode(Map.mousePos);
+					if(!this.map.mousePos) return;
+					this.addNode(this.map.mousePos);
 					this.rerender();
 					break;
 				case "s":
@@ -671,7 +729,7 @@ class Graph {
 					if(this.crosshair) this.crosshair.remove();
 					this.crosshair = L.marker(this.lastHover.pos, {
 						icon: Icons.crosshair
-					}).addTo(Map);
+					}).addTo(this.map);
 					this.crosshair._icon.style.pointerEvents = "none";
 					this.lastSelect = Object.assign({}, this.lastHover);
 					break;
@@ -683,17 +741,17 @@ class Graph {
 					}
 					break;
 				case "q":
-					if(!Map.mousePos) return;
+					if(!this.map.mousePos) return;
 					this.resources.push({
-						latlng: Map.mousePos,
+						latlng: this.map.mousePos,
 						type: null,
 					});
 					this.rerender();
 					break;
 				case "w":
-					if(!Map.mousePos) return;
+					if(!this.map.mousePos) return;
 					this.resources.push({
-						latlng: Map.mousePos,
+						latlng: this.map.mousePos,
 						type: "solar",
 					});
 					this.rerender();
@@ -703,13 +761,16 @@ class Graph {
 			}
 		}
 	}
+	/**
+	 * Renders the graph. If it is already rendered, clears before rendering.
+	 */
 	rerender() {
-		this.markerLayer.remove();
-		this.resourceLayer.remove();
-		this.circleLayer.remove();
-		this.branchLayer.remove();
-		this.externalBranchLayer.remove();
-		this.render(Map);
+		if(this.markerLayer) this.markerLayer.remove();
+		if(this.resourceLayer) this.resourceLayer.remove();
+		if(this.circleLayer) this.circleLayer.remove();
+		if(this.branchLayer) this.branchLayer.remove();
+		if(this.externalBranchLayer) this.externalBranchLayer.remove();
+		this.render(this.map);
 	}
 	contextMenu(event) {
 		if(this.mode == 0) this.normalContextMenu(event);

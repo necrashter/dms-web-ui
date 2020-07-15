@@ -7,37 +7,46 @@
 		<link rel="stylesheet" type="text/css" href="graph.css">
 		<link rel="stylesheet" type="text/css" href="CustomSelect.css">
 		<!-- TODO: Make these local? -->
+		<!-- 3rd party scripts -->
 		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
 							   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
 							   crossorigin=""/>
 		<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
 				integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
 				crossorigin=""></script>
+		<script src="https://unpkg.com/leaflet-ant-path" type="text/javascript"></script>
 		<script src="libs/d3/d3.min.js"></script>
 	</head>
 	<body> 
-		<div id="map"></div> 
+		<div id="PanelContainer">
+			<div id="LeftPanel">
+				<div id="map"></div> 
+				<div id="HUD">
+					<div id="BottomLeftPanel">
+						<div id="LatLang"></div>
+					</div>
+					<div id="BottomRightPanel">
+						<h1>Legend</h1>
+						<p>Blue: Energized</p>
+						<p>Red: Damaged</p>
+						<p>Click on a node for details.</p>
+					</div>
+					<div id="TopLeftPanel">
+						METU CPS
+					</div>
+					<div id="TopRightPanel">
+					</div>
+					<div id="MenuButton" class="blockButton">Menu</div>
+				</div>
+			</div> 
+			<div id="RightPanel">
+				<div id="RightPanelContent">
+				</div> 
+			</div> 
+		</div> 
 
-		<div id="HUD">
-			<div id="BottomLeftPanel">
-				<div id="LatLang"></div>
-			</div>
-			<div id="BottomRightPanel">
-				<h1>Legend</h1>
-				<p>Blue: Energized</p>
-				<p>Red: Damaged</p>
-				<p>Click on a node for details.</p>
-			</div>
-			<div id="TopLeftPanel">
-				METU CPS
-			</div>
-			<div id="TopRightPanel">
-			</div>
-			<div id="MenuButton" class="blockButton">Menu</div>
-		</div>
-
-		<div id="Overlay" class="hidden">
-		</div>
+		<!-- Might move this inside the Left div -->
+		<div id="Overlay" class="hidden"> </div>
 
 		<div id="Tooltip" class="hidden"></div>
 		<div id="ContextMenu" class="hidden"></div>
@@ -49,6 +58,7 @@
 		<script src="Map.js"></script>
 		<script src="Plot.js"></script>
 		<script src="Menu.js"></script>
+		<script src="RightPanel.js"></script>
 		<script src="index.js"></script>
 	</body>
 </html>

@@ -166,10 +166,10 @@ function donutChart(data, width, height, options = {}) {
 }
 
 
-function createBranchStats() {
+function createNodeStats() {
 	var labels = ["Damaged", "Unknown", "Energized"];
 	var data = [0, 0, 0];
-	graph.branches.forEach(branch => {
+	graph.nodes.forEach(branch => {
 		data[branch.status+1] += 1;
 	});
 	let domain = [0, d3.max(data)];

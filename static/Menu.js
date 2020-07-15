@@ -41,7 +41,7 @@ function statsButton() {
 	let box0 = content.append("div").classed("halfBox", true)
 		.append("div").classed("contentBox", true);
 	box0.append("h1").text("Branch Status");
-	box0.append(createBranchStats);
+	box0.append(createNodeStats);
 
 
 	let box1 = content.append("div").classed("halfBox", true)
@@ -49,7 +49,7 @@ function statsButton() {
 	box1.append("h1").text("Branch Status");
 	var labels = ["Damaged", "Unknown", "Energized"];
 	var data = [0, 0, 0];
-	graph.branches.forEach(branch => {
+	graph.nodes.forEach(branch => {
 		data[branch.status+1] += 1;
 	});
 	let width = box1.node().getBoundingClientRect().width;
@@ -75,7 +75,7 @@ function statsButton() {
 			keys.push(name);
 			data[name] = 0;
 		}
-		graph.branches.forEach(branch => {
+		graph.nodes.forEach(branch => {
 			if(isNaN(branch.pf)) {
 				data["Unknown"] += 1;
 			} else {
@@ -121,11 +121,8 @@ function d3testMenu() {
   <h1>Test</h1>
   <p>Hello World!</p>
   <h2>D3js Test</h2>
-  <p>D: Damaged branches</p>
-  <p>U: Unknown branches</p>
-  <p>E: Energized branches</p>
   `;
-	let div = createBranchStats();
+	let div = createNodeStats();
 	inner.appendChild(div);
 
 	Overlay.classList.remove("hidden");
