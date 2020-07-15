@@ -442,40 +442,6 @@ class Graph {
 		var externalBranches = [];
 		var resourceMarkers = [];
 
-		for(var i = 0; i<this.nodes.length; ++i) {
-			let node = this.nodes[i];
-			let latlng = node.latlng;
-			let color = (node.status>0) ? energizedColor :
-				(node.status<0) ? unenergizedColor : shadowColor;
-
-			//markers.push(L.marker(latlng, {icon: testIcon}));
-			let circle = L.circleMarker(latlng, {
-				color: color,
-				fillColor: color,
-				fillOpacity: 1.0,
-				radius: nodeRadius,
-				pane: "nodes",
-			});
-			circle.node = node;
-			circle.on("mouseover", this.nodeOnMouseOver.bind(this));
-			circle.on("mouseout", this.nodeOnMouseOut.bind(this));
-			circle.on("click", this.nodeOnClick.bind(this));
-			circles.push(circle);
-		}
-		// add resources
-		for(var i = 0; i<this.resources.length; ++i) {
-			let resource = this.resources[i];
-			let type = resource.type ? resource.type : "tower";
-			let marker = L.marker(resource.latlng, {
-				icon: Icons[type],
-				pane: "nodes",
-			});
-			marker.data = resource;
-			marker.on("mouseover", this.resourceOnMouseOver.bind(this));
-			marker.on("click", this.resourceOnClick.bind(this));
-			marker.on("mouseout",  this.resourceOnMouseOut.bind(this));
-			resourceMarkers.push(marker);
-		}
 		// add branches
 		for(var i = 0; i<this.branches.length; ++i) {
 			let branch = this.branches[i];
@@ -493,14 +459,12 @@ class Graph {
 					paused: false,
 					reversed: false,
 					"hardwareAccelerated": true,
-					pane: "branches",
 				});
 			} else {
 				line = L.polyline(route, {
 					color: shadowColor,
 					weight: lineWeight,
 					smoothFactor: 1,
-					pane: "branches",
 				});
 			}
 			line.branch = branch;
@@ -530,6 +494,39 @@ class Graph {
 			line.on("mouseout", this.externalBranchOnMouseOut.bind(this));
 			externalBranches.push(line);
 			this.nodes[branch.node].externalBranches.push(line);
+		}
+		// add nodes
+		for(var i = 0; i<this.nodes.length; ++i) {
+			let node = this.nodes[i];
+			let latlng = node.latlng;
+			let color = (node.status>0) ? energizedColor :
+				(node.status<0) ? unenergizedColor : shadowColor;
+
+			//markers.push(L.marker(latlng, {icon: testIcon}));
+			let circle = L.circleMarker(latlng, {
+				color: color,
+				fillColor: color,
+				fillOpacity: 1.0,
+				radius: nodeRadius,
+			});
+			circle.node = node;
+			circle.on("mouseover", this.nodeOnMouseOver.bind(this));
+			circle.on("mouseout", this.nodeOnMouseOut.bind(this));
+			circle.on("click", this.nodeOnClick.bind(this));
+			circles.push(circle);
+		}
+		// add resources
+		for(var i = 0; i<this.resources.length; ++i) {
+			let resource = this.resources[i];
+			let type = resource.type ? resource.type : "tower";
+			let marker = L.marker(resource.latlng, {
+				icon: Icons[type],
+			});
+			marker.data = resource;
+			marker.on("mouseover", this.resourceOnMouseOver.bind(this));
+			marker.on("click", this.resourceOnClick.bind(this));
+			marker.on("mouseout",  this.resourceOnMouseOut.bind(this));
+			resourceMarkers.push(marker);
 		}
 		this.markerLayer = L.layerGroup(markers);
 		this.resourceLayer = L.layerGroup(resourceMarkers);

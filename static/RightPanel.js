@@ -109,9 +109,13 @@ class PolicyView {
 				this.goToPolicyStep(i);
 			});
 		if(this.policyIndex == this.policy.length-1) {
-			this.div.append("h2").text("Congratulations!");
-			this.div.append("p")
+			let endDiv = this.div.append("div");
+			endDiv.append("h2").text("Congratulations!");
+			endDiv.append("p")
 				.text("You have reached the end of the policy.");
+			endDiv.style("opacity", 0)
+				.transition().duration(500)
+				.style("opacity", 1);
 		}
 	}
 }
