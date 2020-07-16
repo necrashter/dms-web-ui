@@ -40,13 +40,13 @@ function statsButton() {
 		.append("div").attr("id", "OverlayRight");
 	let box0 = content.append("div").classed("halfBox", true)
 		.append("div").classed("contentBox", true);
-	box0.append("h1").text("Branch Status");
+	box0.append("h1").text("Bus Status");
 	box0.append(createNodeStats);
 
 
 	let box1 = content.append("div").classed("halfBox", true)
 		.append("div").classed("contentBox", true);
-	box1.append("h1").text("Branch Status");
+	box1.append("h1").text("Bus Status");
 	var labels = ["Damaged", "Unknown", "Energized"];
 	var data = [0, 0, 0];
 	graph.nodes.forEach(branch => {
