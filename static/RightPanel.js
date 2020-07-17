@@ -45,28 +45,45 @@ class PolicyView {
 		// policy starts with null, because it represents the initial
 		// state, before any actions are taken
 		this.policy = [null];
-		this.graph.nodes.forEach((node, i) => {
-			if(node.status == 0) this.policy.push(i);
-		});
+		// we can only activate unknown nodes
+		let nodesToActivate = this.graph.nodes.filter(node => node.status == 0);
+		while(nodesToActivate.length > 0) {
+			let remaining = nodesToActivate.length;
+			let nextNodes = Math.min(remaining, Math.ceil(Math.random()*3));
+			this.policy.push({
+				nodes: nodesToActivate.splice(0, nextNodes),
+			});
+		}
 		this.policyIndex = 0;
 		this.infoText = "A trivial policy has been generated.";
 		this.policyNavigator();
 	}
 	goToPolicyStep(index) {
 		this.policyIndex = index;
-		this.graph.nodes.forEach( (node, i) => {
-			// stands for node policy index
-			let npi = this.policy.indexOf(i);
-			if(npi >= 0) {
-				if(npi <= index) {
-					node.status = 1;
-				} else {
-					node.status = 0;
-				}
+		for(let i=1; i<this.policy.length; ++i) {
+			let nodes = this.policy[i].nodes;
+			if(i <= index) {
+				nodes.forEach(node => node.status = 1);
+			} else {
+				nodes.forEach(node => node.status = 0);
 			}
-		});
+		}
 		this.graph.rerender();
 		this.policyNavigator();
+	}
+	/**
+	 * Calculates the probability of failure of the specified step, relative
+	 * to current step.
+	 */
+	successProbability(index) {
+		let p = 1;
+		for(let i = this.policyIndex+1; i<=index; ++i) {
+			let nodes = this.policy[i].nodes;
+			nodes.forEach(node => {
+				p *= (1-node.pf);
+			});
+		}
+		return p;
 	}
 	policyNavigator() {
 		this.div.html("");
@@ -90,6 +107,9 @@ class PolicyView {
 			next.on("click", () => {
 				this.goToPolicyStep(this.policyIndex+1);
 			});
+			let p = this.successProbability(this.policyIndex+1);
+			this.div.append("p").text("Success Probability for next step: "+
+				p.toFixed(3));
 		} else {
 			next.classed("disabled", true);
 		}
@@ -98,7 +118,10 @@ class PolicyView {
 		stepList.selectAll("div").data(this.policy).join("div")
 			.text(d => {
 				if(d==null) return "Initial Status";
-				else return "Activate Node #"+d;
+				else {
+					return "Activate Nodes "+
+						(d.nodes.map(node => "#"+node.index).join(", "));
+				}
 			})
 			.attr("class", (_, i) => {
 				if(i > this.policyIndex) return "disabled";

@@ -125,6 +125,10 @@ class Graph {
 				console.log("Warning: field not found in graph:", field);
 			}
 		});
+		// nodes need to know their indexes
+		this.nodes.forEach((node, i) => {
+			node.index = i;
+		});
 		BottomRightPanel.classList.add("hidden");
 		if(g.view && g.zoom) {
 			this.map.flyTo(g.view, g.zoom);
@@ -224,7 +228,7 @@ class Graph {
 		Tooltip.div.innerHTML =
 			`Node #${this.nodes.indexOf(node)} <br/>
 			  Status: ${status} <br/>
-			P<sub>f</sub>: ${pf ? pf : "Unknown"}
+			P<sub>f</sub>: ${pf ? pf.toFixed(3) : "Unknown"}
 		`;
 		Tooltip.show(event.originalEvent);
 	}
