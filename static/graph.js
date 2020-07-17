@@ -226,7 +226,7 @@ class Graph {
 		// Lat: ${Math.round(10000*event.target._latlng.lat)/10000} <br/>
 		// Lng: ${Math.round(10000*event.target._latlng.lng)/10000}
 		Tooltip.div.innerHTML =
-			`Node #${this.nodes.indexOf(node)} <br/>
+			`<b>Node #${this.nodes.indexOf(node)}</b> <br/>
 			  Status: ${status} <br/>
 			P<sub>f</sub>: ${pf ? pf.toFixed(3) : "Unknown"}
 		`;
@@ -446,7 +446,6 @@ class Graph {
 		var externalBranches = [];
 		var resourceMarkers = [];
 		const branchMode = this.mode == 0 ? "branches" : "nodes";
-		console.log(branchMode);
 
 		// add branches
 		for(var i = 0; i<this.branches.length; ++i) {

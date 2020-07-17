@@ -80,8 +80,8 @@ var latdiv = document.getElementById("LatLang");
 //var mouseLat
 Map.on('mousemove', (event) => {
 	Map.mousePos = [event.latlng.lat, event.latlng.lng];
-	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
-	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
+	let lat = event.latlng.lat.toFixed(4);
+	let lng = event.latlng.lng.toFixed(4);
 	latdiv.innerHTML = lat + ", " + lng;
 	// Pass the originalEvent
 	//Tooltip.onMouseMove(event.originalEvent);

@@ -115,13 +115,12 @@ html, body {
 }
 
 #TopRightPanel {
-	font-family: monospace;
-    font-size: 2em;
+    font-size: 1.25em;
     position: absolute;
     top: 0;
     right: 0;
     margin: 0;
-    padding: 0.5em;
+	padding: 0.5em 0.5em 1em 1em;
     color: var(--blue-fg);
     z-index: 500;
     text-shadow: 0 0 5px var(--blue-text-shadow);
