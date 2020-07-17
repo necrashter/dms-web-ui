@@ -441,6 +441,8 @@ class Graph {
 		var branches = [];
 		var externalBranches = [];
 		var resourceMarkers = [];
+		const branchMode = this.mode == 0 ? "branches" : "nodes";
+		console.log(branchMode);
 
 		// add branches
 		for(var i = 0; i<this.branches.length; ++i) {
@@ -459,12 +461,14 @@ class Graph {
 					paused: false,
 					reversed: false,
 					"hardwareAccelerated": true,
+					pane: branchMode
 				});
 			} else {
 				line = L.polyline(route, {
 					color: shadowColor,
 					weight: lineWeight,
 					smoothFactor: 1,
+					pane: branchMode
 				});
 			}
 			line.branch = branch;
@@ -487,6 +491,7 @@ class Graph {
 				color: lineColor,
 				weight: lineWeight,
 				smoothFactor: 1,
+				pane: branchMode
 			});
 			// rename to externalBranch?
 			line.branch = branch;
@@ -508,6 +513,7 @@ class Graph {
 				fillColor: color,
 				fillOpacity: 1.0,
 				radius: nodeRadius,
+				pane: "nodes"
 			});
 			circle.node = node;
 			circle.on("mouseover", this.nodeOnMouseOver.bind(this));
@@ -521,6 +527,7 @@ class Graph {
 			let type = resource.type ? resource.type : "tower";
 			let marker = L.marker(resource.latlng, {
 				icon: Icons[type],
+				pane: "nodes"
 			});
 			marker.data = resource;
 			marker.on("mouseover", this.resourceOnMouseOver.bind(this));

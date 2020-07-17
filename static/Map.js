@@ -97,10 +97,19 @@ Map.on('click', event => {
 
 Map.on("contextmenu", event => {
 	console.log("contextmenu")
-	graph.contextMenu(event);
-	ContextMenu.toggle(event.originalEvent);
+	if(graph) {
+		graph.contextMenu(event);
+		ContextMenu.toggle(event.originalEvent);
+	}
 	event.originalEvent.preventDefault();
 });
+
+Map.createPane("nodes");
+Map.getPane('nodes').style.zIndex = 650;
+Map.createPane("branches");
+Map.getPane('branches').style.zIndex = 450;
+//Map.getPane('branches').style.pointerEvents = "none";
+
 
 // this function can be used to add some layers
 // depending on the zoom level

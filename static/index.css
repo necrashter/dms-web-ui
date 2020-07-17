@@ -480,6 +480,11 @@ input[type="text"] {
     height: 100%;
     left: 0;
     top: 0;
+	pointer-events: none;
+}
+
+#HUD > * {
+	pointer-events: auto;
 }
 
 .disabled {
