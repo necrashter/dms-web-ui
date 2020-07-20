@@ -104,6 +104,9 @@ Map.on("contextmenu", event => {
 	event.originalEvent.preventDefault();
 });
 
+// resources must have the highest z index
+Map.createPane("resources");
+Map.getPane('resources').style.zIndex = 700;
 Map.createPane("nodes");
 Map.getPane('nodes').style.zIndex = 650;
 Map.createPane("branches");

@@ -1,4 +1,5 @@
 
+var saveCount = 0;
 /* constants related to rendering graph */
 const energizedColor = "#0000FF";
 const unenergizedColor = "#c70039";
@@ -71,6 +72,47 @@ function createSelectBox(target, data, name, value) {
 			innerDiv.classList.remove("open");
 		});
 	return info;
+}
+
+
+// graph helper functions
+
+function createEnergizedAntPath(route) {
+	return L.polyline.antPath(route, {
+		delay: antPathDelay,
+		dashArray: antPathDashArray,
+		color: energizedColor,
+		pulseColor: "#FFFFFF",
+		weight: lineWeight,
+		smoothFactor: 1,
+		paused: false,
+		reversed: false,
+		"hardwareAccelerated": true,
+		pane: "branches"
+	});
+}
+
+function createEnergizedArrow(route, decorators) {
+	let line = L.polyline(route, {
+		color: energizedColor,
+		weight: lineWeight,
+		smoothFactor: 1,
+		pane: "nodes"
+	});
+	let decorator = L.polylineDecorator( line, {
+		patterns: [
+			//{offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 15, polygon: false, pathOptions: {stroke: true}})}
+			{offset: '50%', repeat: 0, symbol: L.Symbol.arrowHead({
+				pixelSize: 25, pathOptions: {
+					color: energizedColor,
+					fillOpacity: 1, weight: 0
+				},
+			})}
+
+		]
+	});
+	decorators.push(decorator);
+	return line;
 }
 
 class Graph {
@@ -191,8 +233,10 @@ class Graph {
 		g.zoom = this.map.getZoom();
 		return JSON.stringify(g, null, 4);
 	}
-	saveFile(filename="graph.json") {
+	saveFile(filename=null) {
+		if(!filename) filename = "graph"+saveCount+".json";
 		downloadData(filename, this.getJson());
+		saveCount++;
 	}
 
 	/**
@@ -445,6 +489,7 @@ class Graph {
 		var branches = [];
 		var externalBranches = [];
 		var resourceMarkers = [];
+		var decorators = [];
 		const branchMode = this.mode == 0 ? "branches" : "nodes";
 
 		// add branches
@@ -454,18 +499,11 @@ class Graph {
 			let line;
 			if ( this.nodes[branch.nodes[0]].status > 0 &&
 					this.nodes[branch.nodes[1]].status > 0) {
-				line = L.polyline.antPath(route, {
-					delay: antPathDelay,
-					dashArray: antPathDashArray,
-					color: energizedColor,
-					pulseColor: "#FFFFFF",
-					weight: lineWeight,
-					smoothFactor: 1,
-					paused: false,
-					reversed: false,
-					"hardwareAccelerated": true,
-					pane: branchMode
-				});
+				if(this.mode == 0) {
+					line = createEnergizedAntPath(route);
+				} else {
+					line = createEnergizedArrow(route, decorators);
+				}
 			} else {
 				line = L.polyline(route, {
 					color: shadowColor,
@@ -530,7 +568,7 @@ class Graph {
 			let type = resource.type ? resource.type : "tower";
 			let marker = L.marker(resource.latlng, {
 				icon: Icons[type],
-				pane: "nodes"
+				pane: "resources"
 			});
 			marker.data = resource;
 			marker.on("mouseover", this.resourceOnMouseOver.bind(this));
@@ -543,8 +581,10 @@ class Graph {
 		this.circleLayer = L.layerGroup(circles);
 		this.branchLayer = L.layerGroup(branches);
 		this.externalBranchLayer = L.layerGroup(externalBranches);
+		this.decoratorLayer = L.layerGroup(decorators);
 
 		this.map = map;
+		this.decoratorLayer.addTo(map);
 		this.branchLayer.addTo(map);
 		this.externalBranchLayer.addTo(map);
 		this.circleLayer.addTo(map);
@@ -781,10 +821,11 @@ class Graph {
 			}
 		}
 	}
-	/**
-	 * Renders the graph. If it is already rendered, clears before rendering.
-	 */
-	rerender() {
+	clear() {
+		if(this.decoratorLayer) {
+			this.decoratorLayer.clearLayers();
+			this.decoratorLayer.remove();
+		}
 		if(this.markerLayer) {
 			this.markerLayer.clearLayers();
 			this.markerLayer.remove();
@@ -805,6 +846,12 @@ class Graph {
 			this.externalBranchLayer.clearLayers();
 			this.externalBranchLayer.remove();
 		}
+	}
+	/**
+	 * Renders the graph. If it is already rendered, clears before rendering.
+	 */
+	rerender() {
+		this.clear();
 		this.render(this.map);
 	}
 	contextMenu(event) {

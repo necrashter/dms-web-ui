@@ -8,6 +8,9 @@ var attributionHTML = `
   <p>Icons made by <a href="http://www.freepik.com/" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a></p>
   <p>Icons made by <a href="https://www.flaticon.com/free-icon/solar-energy_2933972" title="Good Ware">Good Ware</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a></p>
   <p><b>Target Icon:</b> Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a></p>
+
+  Leaflet
+  https://github.com/bbecquet/Leaflet.PolylineDecorator
   `;
 
 
@@ -76,7 +79,7 @@ function statsButton() {
 			data[name] = 0;
 		}
 		graph.nodes.forEach(branch => {
-			if(isNaN(branch.pf)) {
+			if(!branch.pf || isNaN(branch.pf)) {
 				data["Unknown"] += 1;
 			} else {
 				let index = Math.floor(branch.pf*division);

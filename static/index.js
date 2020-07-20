@@ -202,7 +202,7 @@ fallbackGraph = {
     "zoom": 13
 }
 
-var graph = new Graph(Map);
+var graph;
 
 function loadJsonFromServer(filename) {
 	Server.get(filename).then(response => {
@@ -224,27 +224,43 @@ Server.get("restorer.json").then(response => {
 });
 */
 
-Server.get("/getGraphs").then(response => {
-	let fileList = JSON.parse(response);
-	console.log(fileList);
-	selectGraph( fileList.map(filename => {
-		return {
-			name: filename,
-			load: () => loadJsonFromServer("graphs/"+filename)
-		};
-	})
-	);
-}).catch(error => {
-	selectGraph([
-		{name: "Test Graph",
-			load: () => graph.loadGraph(fallbackGraph)}
-	], div => {
-		div.append("p")
-			.text("Failed to get graph list from server: "+error.message)
-			.style("color", "red");
-		div.append("p")
-			.text("You can load a built-in graph.")
-	});
-});
+var graphChoices = null;
 
+/**
+ * Gets the graph list from server, and creates the selection UI in the right
+ * panel.
+ * graph must be cleared and null before calling this function.
+ */
+function openSelectGraph() {
+	graph = new Graph(Map);
+	if(graphChoices) {
+		selectGraph(graphChoices);
+	} else {
+		Server.get("/getGraphs").then(response => {
+			let fileList = JSON.parse(response);
+			console.log(fileList);
+			graphChoices = fileList.map(g => {
+				return {
+					name: g.name,
+					view: g.view,
+					load: () => loadJsonFromServer("graphs/"+g.filename)
+				};
+			});
+			selectGraph(graphChoices);
+		}).catch(error => {
+			selectGraph([
+				{name: "Test Graph",
+					view: fallbackGraph.view,
+					load: () => graph.loadGraph(fallbackGraph)}
+			], div => {
+				div.append("p")
+					.text("Failed to get graph list from server: "+error.message)
+					.style("color", "red");
+				div.append("p")
+					.text("You can load a built-in graph.")
+			});
+		});
+	}
+}
 
+openSelectGraph();

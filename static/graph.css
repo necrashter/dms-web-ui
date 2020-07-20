@@ -4,6 +4,7 @@
 }
 
 .divIcon {
+	pointer-events: auto;
 	/*
 	animation-name: fadeIn;
 	animation-duration: 0.4s;
@@ -40,3 +41,25 @@
 filter: brightness(80%);
 }
  */
+
+
+.blockMarker {
+	text-shadow: 0 0 5px var(--blue-text-shadow);
+	background: var(--blue-dark-bg);
+	color: var(--blue-fg);
+	border: 0.15em solid var(--blue-border);
+	padding: 0.6em 1.2em;
+	margin: 0.2em;
+	cursor: pointer;
+	text-align: center;
+}
+
+.blockMarker:hover {
+	background: var(--reverse-blue-bg);
+	color: var(--reverse-blue-fg);
+}
+
+.blockMarker.hover {
+	background: var(--reverse-blue-bg);
+	color: var(--reverse-blue-fg);
+}
