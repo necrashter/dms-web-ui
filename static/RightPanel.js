@@ -224,6 +224,6 @@ class PolicyView {
 		}
 	}
 	destroy() {
-		this.markerLayer.remove();
+		if(this.markerLayer) this.markerLayer.remove();
 	}
 }
