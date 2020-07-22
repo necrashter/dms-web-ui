@@ -1,3 +1,8 @@
+var Settings = {
+	animateAnts: true,
+	arrows: false,
+}
+
 const Map = L.map('map', {
 	preferCanvas: true, // improves performance
 	attributionControl: false,
@@ -72,6 +77,31 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 		});
 
 	TopRightPanel.appendChild(wrapperDiv.node());
+
+	{
+		let div = d3.create("div");
+		let checkbox = div.append("input")
+			.attr("type", "checkbox")
+			.on("change", () => {
+				Settings.animateAnts = checkbox.node().checked;
+				if(graph) graph.rerender();
+			});
+		checkbox.node().checked = Settings.animateAnts;
+		div.append("label").text("Marching Ants");
+		TopRightPanel.appendChild(div.node());
+	}
+	{
+		let div = d3.create("div");
+		let checkbox = div.append("input")
+			.attr("type", "checkbox")
+			.on("change", () => {
+				Settings.arrows = checkbox.node().checked;
+				if(graph) graph.rerender();
+			});
+		div.append("label").text("Arrows");
+		checkbox.node().checked = Settings.arrows;
+		TopRightPanel.appendChild(div.node());
+	}
 })();
 
 

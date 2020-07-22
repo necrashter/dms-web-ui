@@ -92,27 +92,28 @@ function createEnergizedAntPath(route) {
 	});
 }
 
-function createEnergizedArrow(route, decorators) {
-	let line = L.polyline(route, {
+function createEnergizedArrow(route) {
+	return L.polyline(route, {
 		color: energizedColor,
 		weight: lineWeight,
 		smoothFactor: 1,
 		pane: "nodes"
 	});
-	let decorator = L.polylineDecorator( line, {
+}
+
+function createArrowDecorator(line, energized) {
+	return L.polylineDecorator( line, {
 		patterns: [
 			//{offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 15, polygon: false, pathOptions: {stroke: true}})}
 			{offset: '50%', repeat: 0, symbol: L.Symbol.arrowHead({
 				pixelSize: 25, pathOptions: {
-					color: energizedColor,
+					color: energized ? energizedColor : shadowColor,
 					fillOpacity: 1, weight: 0
 				},
 			})}
 
 		]
 	});
-	decorators.push(decorator);
-	return line;
 }
 
 class Graph {
@@ -497,12 +498,13 @@ class Graph {
 			let branch = this.branches[i];
 			let route = branch.nodes.map(j => this.nodes[j].latlng);
 			let line;
-			if ( this.nodes[branch.nodes[0]].status > 0 &&
-					this.nodes[branch.nodes[1]].status > 0) {
-				if(this.mode == 0) {
+			let energized =  this.nodes[branch.nodes[0]].status > 0 &&
+					this.nodes[branch.nodes[1]].status > 0;
+			if (energized) {
+				if(this.mode == 0 && Settings.animateAnts) {
 					line = createEnergizedAntPath(route);
 				} else {
-					line = createEnergizedArrow(route, decorators);
+					line = createEnergizedArrow(route);
 				}
 			} else {
 				line = L.polyline(route, {
@@ -511,6 +513,9 @@ class Graph {
 					smoothFactor: 1,
 					pane: branchMode
 				});
+			}
+			if(Settings.arrows) {
+				decorators.push(createArrowDecorator(line, energized));
 			}
 			line.branch = branch;
 			line.on("mouseover", this.branchOnMouseOver.bind(this));

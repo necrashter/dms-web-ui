@@ -2,7 +2,8 @@
 var policyView = null;
 
 function getGraphIcon(name) {
-	let width = name.length*6+40;
+	let width = name.toString().length*6+40;
+	console.log("SID",width);
 	return L.divIcon({
 		className: 'divIcon',
 		html: `<div class='blockMarker'>${name}</div>`,
@@ -32,6 +33,7 @@ function selectGraph(choices, prebody=null) {
 			.on("click", () => {
 				content.transition().duration(300).style("opacity", "0")
 					.on("end", () => {
+						policyView.destroy();
 						policyView = null;
 						graph.clear();
 						graph = null;
@@ -106,6 +108,7 @@ class PolicyView {
 		}
 		this.policyIndex = 0;
 		this.infoText = "A trivial policy has been generated.";
+		this.createMarkerLayer();
 		this.policyNavigator();
 	}
 	goToPolicyStep(index) {
@@ -120,6 +123,22 @@ class PolicyView {
 		}
 		this.graph.rerender();
 		this.policyNavigator();
+	}
+	createMarkerLayer() {
+		this.markers = [];
+		for(let i=1; i<this.policy.length; ++i) {
+			let nodes = this.policy[i].nodes;
+			nodes.forEach(node => {
+				let m = L.marker(node.latlng, {
+					icon: getGraphIcon(i),
+					pane: "resources"
+				});
+				m.on("click", () => this.goToPolicyStep(i));
+				this.markers.push(m);
+			});
+		}
+		this.markerLayer = L.layerGroup(this.markers);
+		//this.markerLayer.addTo(Map);
 	}
 	/**
 	 * Calculates the probability of failure of the specified step, relative
@@ -181,6 +200,19 @@ class PolicyView {
 			.on("click", (_, i) => {
 				this.goToPolicyStep(i);
 			});
+		{
+			let div = this.div.append("div");
+			let checkbox = div.append("input")
+				.attr("type", "checkbox")
+				.on("change", () => {
+					if(checkbox.node().checked)
+						this.markerLayer.addTo(Map);
+					else
+						this.markerLayer.remove();
+				})
+				.property("checked", this.markerLayer._map != null);
+			div.append("label").text("Show Numbers on Map");
+		}
 		if(this.policyIndex == this.policy.length-1) {
 			let endDiv = this.div.append("div");
 			endDiv.append("h2").text("Congratulations!");
@@ -190,5 +222,8 @@ class PolicyView {
 				.transition().duration(500)
 				.style("opacity", 1);
 		}
+	}
+	destroy() {
+		this.markerLayer.remove();
 	}
 }
