@@ -86,12 +86,31 @@ class PolicyView {
 	selectPolicyView() {
 		this.div.html("");
 		this.div.append("p")
-			.text(`Currently this cannot generate a proper solution,
-				but it can synthesize a trivial policy where every 
-				unknown node is energized in order.`);
+			.text(`You can either request a solution from the server, or
+				synthesize a trivial solution on the client-side for testing`);
+		this.div.append("div").classed("blockButton", true)
+			.text("Request Policy From Server")
+			.on("click", this.requestPolicy.bind(this));
 		this.div.append("div").classed("blockButton", true)
 			.text("Synthesize Trivial Policy")
 			.on("click", this.createTrivialPolicy.bind(this));
+	}
+	requestPolicy() {
+		this.div.html("Waiting response from server...");
+		let json = this.graph.getJson();
+		Network.post("/policy", json).then(response => {
+			let policy = JSON.parse(response);
+		})
+		.catch(error => {
+			this.div.html("");
+			this.div.append("b").text("Failed to get policy")
+				.style("color","red");
+			this.div.append("p").text(error)
+				.style("color","red");
+			this.div.append("div").classed("blockButton", true)
+				.text("Go Back")
+				.on("click", this.selectPolicyView.bind(this));
+		});
 	}
 	createTrivialPolicy() {
 		// policy starts with null, because it represents the initial

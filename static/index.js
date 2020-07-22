@@ -205,7 +205,7 @@ fallbackGraph = {
 var graph;
 
 function loadJsonFromServer(filename) {
-	Server.get(filename).then(response => {
+	Network.get(filename).then(response => {
 		graph.loadGraph(JSON.parse(response));
 	}).catch(error => {
 		alert("Failed to get graph data from server:\n"+error);
@@ -215,7 +215,7 @@ function loadJsonFromServer(filename) {
 //loadJsonFromServer("sample.json");
 
 /*
-Server.get("restorer.json").then(response => {
+Network.get("restorer.json").then(response => {
 	console.log("loaded sample.json from server");
 	graph.loadGraph(JSON.parse(response));
 }).catch(error => {
@@ -236,7 +236,7 @@ function openSelectGraph() {
 	if(graphChoices) {
 		selectGraph(graphChoices);
 	} else {
-		Server.get("/getGraphs").then(response => {
+		Network.get("/getGraphs").then(response => {
 			let fileList = JSON.parse(response);
 			console.log(fileList);
 			graphChoices = fileList.map(g => {

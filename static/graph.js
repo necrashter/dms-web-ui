@@ -214,7 +214,7 @@ class Graph {
 		};
 		reader.readAsText(file);
 	}	
-	getJson() {
+	getJson(indent=0) {
 		let g = {};
 		g.nodes = this.nodes.map(n => {
 			return {
@@ -232,11 +232,11 @@ class Graph {
 		g.resources = this.resources;
 		g.view = this.map.getCenter();
 		g.zoom = this.map.getZoom();
-		return JSON.stringify(g, null, 4);
+		return JSON.stringify(g, null, indent);
 	}
 	saveFile(filename=null) {
 		if(!filename) filename = "graph"+saveCount+".json";
-		downloadData(filename, this.getJson());
+		downloadData(filename, this.getJson(4));
 		saveCount++;
 	}
 
