@@ -3,7 +3,6 @@ var policyView = null;
 
 function getGraphIcon(name) {
 	let width = name.toString().length*6+40;
-	console.log("SID",width);
 	return L.divIcon({
 		className: 'divIcon',
 		html: `<div class='blockMarker'>${name}</div>`,
@@ -73,6 +72,62 @@ function selectGraph(choices, prebody=null) {
 	markerLayer.addTo(Map);
 }
 
+function trivialPolicy(grph) {
+	// policy starts with null, because it represents the initial
+	// state, before any actions are taken
+	let steps = [null];
+	// we can only activate unknown nodes
+	let nodesToActivate = grph.nodes.filter(node => node.status == 0);
+	while(nodesToActivate.length > 0) {
+		let remaining = nodesToActivate.length;
+		let nextNodes = Math.min(remaining, Math.ceil(Math.random()*3));
+		steps.push({
+			nodes: nodesToActivate.splice(0, nextNodes),
+		});
+	}
+	return new Policy(grph, steps);
+}
+
+class Policy {
+	constructor(_graph, steps) {
+		this.graph = _graph;
+		this.steps = steps;
+		this.index = 0;
+	}
+	goTo(index) {
+		this.index = index;
+		for(let i=1; i<this.steps.length; ++i) {
+			let nodes = this.steps[i].nodes;
+			if(i <= index) {
+				nodes.forEach(node => node.status = 1);
+			} else {
+				nodes.forEach(node => node.status = 0);
+			}
+		}
+	}
+	/**
+	 * Calculates the probability of failure of the specified step, relative
+	 * to current step.
+	 */
+	successProbability(index) {
+		let p = 1;
+		for(let i = this.index+1; i<=index; ++i) {
+			let nodes = this.steps[i].nodes;
+			nodes.forEach(node => {
+				p *= (1-node.pf);
+			});
+		}
+		return p;
+	}
+	getName(d) {
+		if(d==null) return "Initial Status";
+		else {
+			return "Activate Nodes "+
+				(d.nodes.map(node => "#"+node.index).join(", "));
+		}
+	}
+}
+
 class PolicyView {
 	/**
 	 * Takes a graph and div.
@@ -100,7 +155,42 @@ class PolicyView {
 		let json = this.graph.getJson();
 		Network.post("/policy", json).then(response => {
 			let policy = JSON.parse(response);
+			console.log(policy)
+			// First make every bus "Unknown"
+			this.graph.nodes.forEach(node => {
+				node.status = 0;
+			});
+			// first step will be null, representing the initial 
+			// status where everything is Unknown
+			let steps = [null];
+			let current = 0;
+			let currentState = policy.states[current];
+			let states = [currentState];
+			while(current < policy.states.length){
+				let actions = policy.transitions[current];
+				let action = actions[policy.policy[current]];
+				let next = action[0][0] - 1;
+				let nextState = policy.states[next];
+				if(!nextState) break;
+				states.push(nextState);
+				let nodes = [];
+				for(let i =0; i<currentState.length; ++i) {
+					if(currentState[i] != nextState[i]) {
+						nodes.push(this.graph.nodes[i]);
+					}
+				}
+				if(nodes.length ==0) break;
+				steps.push({
+					nodes: nodes
+				});
+				current = next;
+				currentState = nextState;
+			}
+			console.log(states);
+			this.setPolicy(new Policy(this.graph, steps));
+			this.graph.rerender();
 		})
+		/*
 		.catch(error => {
 			this.div.html("");
 			this.div.append("b").text("Failed to get policy")
@@ -111,42 +201,26 @@ class PolicyView {
 				.text("Go Back")
 				.on("click", this.selectPolicyView.bind(this));
 		});
+		*/
 	}
-	createTrivialPolicy() {
-		// policy starts with null, because it represents the initial
-		// state, before any actions are taken
-		this.policy = [null];
-		// we can only activate unknown nodes
-		let nodesToActivate = this.graph.nodes.filter(node => node.status == 0);
-		while(nodesToActivate.length > 0) {
-			let remaining = nodesToActivate.length;
-			let nextNodes = Math.min(remaining, Math.ceil(Math.random()*3));
-			this.policy.push({
-				nodes: nodesToActivate.splice(0, nextNodes),
-			});
-		}
-		this.policyIndex = 0;
-		this.infoText = "A trivial policy has been generated.";
+	setPolicy(policy) {
+		this.policy = policy;
 		this.createMarkerLayer();
 		this.policyNavigator();
 	}
+	createTrivialPolicy() {
+		this.infoText = "A trivial policy has been generated.";
+		this.setPolicy(trivialPolicy(this.graph));
+	}
 	goToPolicyStep(index) {
-		this.policyIndex = index;
-		for(let i=1; i<this.policy.length; ++i) {
-			let nodes = this.policy[i].nodes;
-			if(i <= index) {
-				nodes.forEach(node => node.status = 1);
-			} else {
-				nodes.forEach(node => node.status = 0);
-			}
-		}
+		this.policy.goTo(index);
 		this.graph.rerender();
 		this.policyNavigator();
 	}
 	createMarkerLayer() {
 		this.markers = [];
-		for(let i=1; i<this.policy.length; ++i) {
-			let nodes = this.policy[i].nodes;
+		for(let i=1; i<this.policy.steps.length; ++i) {
+			let nodes = this.policy.steps[i].nodes;
 			nodes.forEach(node => {
 				let m = L.marker(node.latlng, {
 					icon: getGraphIcon(i),
@@ -159,20 +233,6 @@ class PolicyView {
 		this.markerLayer = L.layerGroup(this.markers);
 		//this.markerLayer.addTo(Map);
 	}
-	/**
-	 * Calculates the probability of failure of the specified step, relative
-	 * to current step.
-	 */
-	successProbability(index) {
-		let p = 1;
-		for(let i = this.policyIndex+1; i<=index; ++i) {
-			let nodes = this.policy[i].nodes;
-			nodes.forEach(node => {
-				p *= (1-node.pf);
-			});
-		}
-		return p;
-	}
 	policyNavigator() {
 		this.div.html("");
 		if(this.infoText) this.div.append("p").text(this.infoText);
@@ -184,18 +244,18 @@ class PolicyView {
 			.text("Previous Step");
 		let next = buttonDiv.append("div").classed("blockButton", true)
 			.text("Next Step");
-		if(this.policyIndex>0) {
+		if(this.policy.index>0) {
 			prev.on("click", () => {
-				this.goToPolicyStep(this.policyIndex-1);
+				this.goToPolicyStep(this.policy.index-1);
 			});
 		} else {
 			prev.classed("disabled", true);
 		}
-		if(this.policyIndex < this.policy.length -1) {
+		if(this.policy.index < this.policy.steps.length -1) {
 			next.on("click", () => {
-				this.goToPolicyStep(this.policyIndex+1);
+				this.goToPolicyStep(this.policy.index+1);
 			});
-			let p = this.successProbability(this.policyIndex+1);
+			let p = this.policy.successProbability(this.policy.index+1);
 			this.div.append("p").text("Success Probability for next step: "+
 				p.toFixed(3));
 		} else {
@@ -203,25 +263,20 @@ class PolicyView {
 		}
 		// lists policy steps
 		let stepList = this.div.append("div").classed("selectList", true);
-		stepList.selectAll("div").data(this.policy).join("div")
-			.text(d => {
-				if(d==null) return "Initial Status";
-				else {
-					return "Activate Nodes "+
-						(d.nodes.map(node => "#"+node.index).join(", "));
-				}
-			})
+		stepList.selectAll("div").data(this.policy.steps).join("div")
+			.text(this.policy.getName)
 			.attr("class", (_, i) => {
-				if(i > this.policyIndex) return "disabled";
-				else if(i == this.policyIndex) return "currentIndex";
+				if(i > this.policy.index) return "disabled";
+				else if(i == this.policy.index) return "currentIndex";
 				else return "";
 			})
 			.on("click", (_, i) => {
 				this.goToPolicyStep(i);
 			});
 		{
-			let div = this.div.append("div");
+			let div = this.div.append("div").classed("customCheckbox", true);
 			let checkbox = div.append("input")
+				.attr("id", "showNums")
 				.attr("type", "checkbox")
 				.on("change", () => {
 					if(checkbox.node().checked)
@@ -230,9 +285,11 @@ class PolicyView {
 						this.markerLayer.remove();
 				})
 				.property("checked", this.markerLayer._map != null);
-			div.append("label").text("Show Numbers on Map");
+			div.append("label")
+				.attr("for", "showNums")
+				.text("Show Numbers on Map");
 		}
-		if(this.policyIndex == this.policy.length-1) {
+		if(this.policy.index == this.policy.steps.length-1) {
 			let endDiv = this.div.append("div");
 			endDiv.append("h2").text("Congratulations!");
 			endDiv.append("p")

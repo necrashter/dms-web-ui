@@ -79,26 +79,32 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 	TopRightPanel.appendChild(wrapperDiv.node());
 
 	{
-		let div = d3.create("div");
+		let div = d3.create("div").classed("customCheckbox", true);
 		let checkbox = div.append("input")
+			.attr("id", "marchingAnts")
 			.attr("type", "checkbox")
 			.on("change", () => {
 				Settings.animateAnts = checkbox.node().checked;
 				if(graph) graph.rerender();
 			});
 		checkbox.node().checked = Settings.animateAnts;
-		div.append("label").text("Marching Ants");
+		div.append("label")
+			.attr("for", "marchingAnts")
+			.text("Marching Ants");
 		TopRightPanel.appendChild(div.node());
 	}
 	{
-		let div = d3.create("div");
+		let div = d3.create("div").classed("customCheckbox", true);
 		let checkbox = div.append("input")
+			.attr("id", "arrows")
 			.attr("type", "checkbox")
 			.on("change", () => {
 				Settings.arrows = checkbox.node().checked;
 				if(graph) graph.rerender();
 			});
-		div.append("label").text("Arrows");
+		div.append("label")
+			.attr("for", "arrows")
+			.text("Arrows");
 		checkbox.node().checked = Settings.arrows;
 		TopRightPanel.appendChild(div.node());
 	}

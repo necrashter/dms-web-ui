@@ -467,6 +467,7 @@ input[type="text"] {
 	background: var(--main-opaque-bg);
 	color: var(--blue-fg);
     border-left: 0.1em solid;
+	overflow-y: scroll;
 }
 
 #RightPanelContent {
