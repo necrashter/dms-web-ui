@@ -63,3 +63,22 @@ filter: brightness(80%);
 	background: var(--reverse-blue-bg);
 	color: var(--reverse-blue-fg);
 }
+
+.numberMarker {
+	font-size: 1.5em;
+	background: var(--blue-dark-bg);
+	color: var(--blue-fg);
+	cursor: pointer;
+	text-align: center;
+	margin-top: 0.45em;
+}
+
+.numberMarker:hover {
+	background: var(--reverse-blue-bg);
+	color: var(--reverse-blue-fg);
+}
+
+.numberMarker.hover {
+	background: var(--reverse-blue-bg);
+	color: var(--reverse-blue-fg);
+}

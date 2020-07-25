@@ -11,6 +11,17 @@ function getGraphIcon(name) {
 	});
 }
 
+function getNumberIcon(name) {
+	let width = name.toString().length*7+20;
+	return L.divIcon({
+		className: 'divIcon',
+		html: `<div class='numberMarker'>${name}</div>`,
+		iconSize: [width,50],
+		iconAnchor: [width/2,0]
+	});
+}
+
+
 var markers;
 function selectGraph(choices, prebody=null) {
 	let markerLayer;
@@ -223,7 +234,7 @@ class PolicyView {
 			let nodes = this.policy.steps[i].nodes;
 			nodes.forEach(node => {
 				let m = L.marker(node.latlng, {
-					icon: getGraphIcon(i),
+					icon: getNumberIcon(i),
 					pane: "resources"
 				});
 				m.on("click", () => this.goToPolicyStep(i));
