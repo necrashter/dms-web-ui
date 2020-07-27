@@ -913,6 +913,27 @@ class Graph {
 				this.setMode(0);
 			});
 	}
+	setState(state) {
+		if(state.length !== this.nodes.length) {
+			throw new Error("State length is not equal to nodes.length "
+				+this.nodes.length);
+		}
+		for(let i=0; i < state.length; ++i) {
+			let node = this.nodes[i];
+			switch(state[i]) {
+				case "U":
+					node.status = 0;
+					break;
+				case "D":
+					node.status = -1;
+					break;
+				default:
+					node.status = 1;
+					break;
+			}
+		}
+		this.rerender();
+	}
 } //end Graph
 
 
