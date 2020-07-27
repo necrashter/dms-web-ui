@@ -154,6 +154,9 @@ class Graph {
 		 */
 		this.resources = [];
 		this.requiredFields = ["nodes", "branches", "externalBranches", "resources"];
+		// this field becomes true if the user enters edit mode
+		// (modifies the graph)
+		this.dirty = false;
 		Object.assign(this, options);
 		this.setEventHandlers();
 	}
@@ -168,6 +171,7 @@ class Graph {
 				console.log("Warning: field not found in graph:", field);
 			}
 		});
+		if(g.solutionFile) this.solutionFile = g.solutionFile;
 		// nodes need to know their indexes
 		this.nodes.forEach((node, i) => {
 			node.index = i;
@@ -176,6 +180,7 @@ class Graph {
 		if(g.view && g.zoom) {
 			this.map.flyTo(g.view, g.zoom);
 		}
+		this.dirty = false;
 		this.rerender();
 	}
 	readFile(event) {
@@ -622,6 +627,7 @@ class Graph {
 		if(this.mode == mode) return;
 		this.mode = mode;
 		if(this.mode == 1) {
+			this.dirty = true;
 			TopLeftPanel.classList.add("warning");
 			TopLeftPanel.innerText = "EDIT MODE";
 			let topbar = d3.create("div").attr("id", "TopBar");

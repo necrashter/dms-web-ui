@@ -204,27 +204,14 @@ fallbackGraph = {
 
 var graph;
 
-function loadJsonFromServer(filename) {
-	Network.get(filename).then(response => {
+function loadGraphFromServer(g) {
+	Network.get("graphs/"+g.filename).then(response => {
 		graph.loadGraph(JSON.parse(response));
+		if(g.solutionFile) graph.solutionFile = "graphs/"+g.solutionFile;
 	}).catch(error => {
 		alert("Failed to get graph data from server:\n"+error);
 	});
 }
-
-//loadJsonFromServer("sample.json");
-
-/*
-Network.get("restorer.json").then(response => {
-	console.log("loaded sample.json from server");
-	graph.loadGraph(JSON.parse(response));
-}).catch(error => {
-	console.error("Failed to get graph data from server:\n"+error);
-	graph.loadGraph(fallbackGraph);
-});
-*/
-
-var graphChoices = null;
 
 /**
  * Gets the graph list from server, and creates the selection UI in the right
@@ -233,34 +220,30 @@ var graphChoices = null;
  */
 function openSelectGraph() {
 	graph = new Graph(Map);
-	if(graphChoices) {
-		selectGraph(graphChoices);
-	} else {
-		Network.get("/getGraphs").then(response => {
-			let fileList = JSON.parse(response);
-			console.log(fileList);
-			graphChoices = fileList.map(g => {
-				return {
-					name: g.name,
-					view: g.view,
-					load: () => loadJsonFromServer("graphs/"+g.filename)
-				};
-			});
-			selectGraph(graphChoices);
-		}).catch(error => {
-			selectGraph([
-				{name: "Test Graph",
-					view: fallbackGraph.view,
-					load: () => graph.loadGraph(fallbackGraph)}
-			], div => {
-				div.append("p")
-					.text("Failed to get graph list from server: "+error.message)
-					.style("color", "red");
-				div.append("p")
-					.text("You can load a built-in graph.")
-			});
+	Network.get("/getGraphs").then(response => {
+		let fileList = JSON.parse(response);
+		console.log(fileList);
+		graphChoices = fileList.map(g => {
+			return {
+				name: g.name,
+				view: g.view,
+				load: () => loadGraphFromServer(g)
+			};
 		});
-	}
+		selectGraph(graphChoices);
+	}).catch(error => {
+		selectGraph([
+			{name: "Test Graph",
+				view: fallbackGraph.view,
+				load: () => graph.loadGraph(fallbackGraph)}
+		], div => {
+			div.append("p")
+				.text("Failed to get graph list from server: "+error.message)
+				.style("color", "red");
+			div.append("p")
+				.text("You can load a built-in graph.")
+		});
+	});
 }
 
 openSelectGraph();

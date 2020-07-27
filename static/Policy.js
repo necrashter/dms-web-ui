@@ -173,36 +173,40 @@ function getStepsFromPolicy(policy) {
 }
 
 function selectPolicyView(div, graph) {
-	function requestPolicy() {
+	function loadPolicy(policy) {
+		// First make every bus "Unknown"
+		graph.nodes.forEach(node => {
+			node.status = 0;
+		});
+		graph.rerender();
+
+		div.html("");
+		div.append("h3").text("Select Mode");
+		div.append("p").text(`Interactive Mode allows you to select the
+				result of each step as you run the policy.`);
+		div.append("div").classed("blockButton", true)
+			.text("Interactive Mode")
+			.on("click", () => {
+				policyView = new InteractivePolicyView(graph, div,
+					new InteractivePolicy(graph, policy));
+			});
+		div.append("p").text(`In linear mode you will see the best case,
+				where the activation of every bus is successful.`);
+		div.append("div").classed("blockButton", true)
+			.text("Linear Mode")
+			.on("click", () => {
+				let steps = getStepsFromPolicy(policy);
+				policyView = new LinearPolicyView(graph, div,
+					new LinearPolicy(graph, steps));
+			});
+	}
+	function requestFreshPolicy() {
+		console.log("requesting new policy...");
 		div.html("Waiting response from server...");
 		let json = graph.getJson();
 		Network.post("/policy", json).then(response => {
 			let policy = JSON.parse(response);
-			// First make every bus "Unknown"
-			graph.nodes.forEach(node => {
-				node.status = 0;
-			});
-			graph.rerender();
-
-			div.html("");
-			div.append("h3").text("Select Mode");
-			div.append("p").text(`Interactive Mode allows you to select the
-				result of each step as you run the policy.`);
-			div.append("div").classed("blockButton", true)
-				.text("Interactive Mode")
-				.on("click", () => {
-					policyView = new InteractivePolicyView(graph, div,
-						new InteractivePolicy(graph, policy));
-				});
-			div.append("p").text(`In linear mode you will see the best case,
-				where the activation of every bus is successful.`);
-			div.append("div").classed("blockButton", true)
-				.text("Linear Mode")
-				.on("click", () => {
-					let steps = getStepsFromPolicy(policy);
-					policyView = new LinearPolicyView(graph, div,
-						new LinearPolicy(graph, steps));
-				});
+			loadPolicy(policy);
 		})
 		.catch(error => {
 			div.html("");
@@ -212,12 +216,27 @@ function selectPolicyView(div, graph) {
 				.style("color","red");
 			div.append("div").classed("blockButton", true)
 				.text("Go Back")
-				.on("click", selectPolicyView);
+				.on("click", () => selectPolicyView(div, graph));
 		});
+	}
+	function getPolicy() {
+		div.html("Please Wait...");
+		if(graph.solutionFile && !graph.dirty) {
+			Network.get(graph.solutionFile).then(response => {
+				console.log("Fetched premade policy:",graph.solutionFile);
+				loadPolicy(JSON.parse(response));
+			}).catch(error => {
+				console.error("Error while getting premade policy",
+					graph.solutionFile,":",error);
+				requestFreshPolicy();
+			});
+		} else {
+			requestFreshPolicy();
+		}
 	}
 	function createTrivialPolicy() {
 		//this.infoText = "A trivial policy has been generated.";
-		let policy = trivialPolicy(this.graph);
+		let policy = trivialPolicy(graph);
 		policyView = new LinearPolicyView(graph, div, policy);
 	}
 	div.html("");
@@ -226,7 +245,7 @@ function selectPolicyView(div, graph) {
 				synthesize a trivial solution on the client-side for testing`);
 	div.append("div").classed("blockButton", true)
 		.text("Request Policy From Server")
-		.on("click", requestPolicy);
+		.on("click", getPolicy);
 	div.append("div").classed("blockButton", true)
 		.text("Synthesize Trivial Policy")
 		.on("click", createTrivialPolicy);
