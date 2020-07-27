@@ -924,18 +924,31 @@ class Graph {
 			throw new Error("State length is not equal to nodes.length "
 				+this.nodes.length);
 		}
-		for(let i=0; i < state.length; ++i) {
-			let node = this.nodes[i];
-			switch(state[i]) {
-				case "U":
-					node.status = 0;
-					break;
-				case "D":
-					node.status = -1;
-					break;
-				default:
-					node.status = 1;
-					break;
+		for(let i=0; i<state.length; ++i) {
+			let status = state[i];
+			this.nodes[i].status = status === "D" ? -1 :
+				status === "U" ? 0 : 1;
+		}
+		// TODO: this is not "deterministic"
+		// Setting directions
+		for(let externalBranch of this.externalBranches) {
+			let nodes = [externalBranch.node];
+			let oldNodes = new Set(); // constant time lookup
+			while(nodes.length > 0) {
+				let node = nodes.pop();
+				for(let b of this.nodes[node].branches) {
+					if(oldNodes.has(b.branch.nodes[0])) continue;
+					if(b.branch.nodes[0] == node) {
+						if(state[b.branch.nodes[1]] == state[node])
+							nodes.push(b.branch.nodes[1]);
+						continue;
+					}
+					if(state[b.branch.nodes[0]] == state[node]) {
+						nodes.push(b.branch.nodes[0]);
+						b.branch.nodes.reverse();
+					}
+				}
+				oldNodes.add(node);
 			}
 		}
 		this.rerender();

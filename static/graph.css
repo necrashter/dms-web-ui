@@ -82,3 +82,17 @@ filter: brightness(80%);
 	background: var(--reverse-blue-bg);
 	color: var(--reverse-blue-fg);
 }
+
+/* not clickable */
+.descMarker {
+	font-size: 1.5em;
+	background: var(--blue-dark-bg);
+	color: var(--blue-fg);
+	text-align: center;
+	margin-top: 0.45em;
+}
+
+.descMarker.neg {
+	background: var(--orange-dark-bg);
+	color: var(--orange-fg);
+}

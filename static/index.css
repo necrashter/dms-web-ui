@@ -501,11 +501,35 @@ input[type="text"] {
 
 .selectList > div {
 	padding: 0.1em 0.5em;
+	display: flex;
 	cursor: pointer;
 }
+.selectList.wide > div {
+	padding: 0.4em 0.5em;
+}
+
 .selectList > .currentIndex::before {
 	content: "▶ ";
 }
+.selectList.wide > div::before {
+	content: "▶ ";
+	padding: 0.5em 1em 0.5em 0.5em;
+	position: absolute;
+    transform: translateX(-2.5em);
+    opacity: 0;
+	transition: opacity 0.5s;
+}
+.selectList.wide > .selected::before {
+	opacity: 1;
+}
+.selectList.wide > div {
+	transition: padding 0.5s;
+	position: relative;
+}
+.selectList.wide > .selected {
+	padding-left: 3em;
+}
+
 .selectList > div:hover {
 	background: var(--reverse-blue-bg);
 	color: var(--reverse-blue-fg);
