@@ -31,7 +31,7 @@ function selectGraph(choices, prebody=null) {
 			.on("click", () => {
 				content.transition().duration(300).style("opacity", "0")
 					.on("end", () => {
-						policyView.destroy();
+						if(policyView && policyView.destroy) policyView.destroy();
 						policyView = null;
 						graph.clear();
 						graph = null;
