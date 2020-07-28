@@ -252,7 +252,7 @@ class Graph {
 		if(mode == 0) {
 			this.nodeOnClick = this.nodeOnInfo;
 			this.branchOnClick = this.branchOnInfo;
-			this.resourceOnClick = this.branchOnInfo;
+			this.resourceOnClick = this.resourceOnInfo;
 		} else {
 			this.nodeOnClick = this.nodeOnEdit;
 			this.branchOnClick = this.branchOnEdit;
@@ -297,7 +297,7 @@ class Graph {
 			default: status="Unknown"; break;
 		}
 		BottomRightPanel.classList.remove("hidden");
-		BottomRightPanel.innerHTML = `
+		BottomRightPanelContent.innerHTML = `
 			<h1>Node #${this.nodes.indexOf(node)}</h1>
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
@@ -306,13 +306,13 @@ class Graph {
 			<p>Connected to ${node.branches.length} branches.</p>
 			`;
 		if(node.externalBranches.length>0) {
-			BottomRightPanel.innerHTML += "<p>Connected to a resource.</p>";
+			BottomRightPanelContent.innerHTML += "<p>Connected to a resource.</p>";
 		}
 	}
 	nodeOnEdit(event) {
 		let node = event.target.node;
 		BottomRightPanel.classList.remove("hidden");
-		BottomRightPanel.innerHTML = `
+		BottomRightPanelContent.innerHTML = `
 			<h1>Node #${this.nodes.indexOf(node)}</h1>
 			<p>Connected to ${node.branches.length} branches.</p>
 			`;
@@ -368,7 +368,7 @@ class Graph {
 		let resource = event.target.data;
 		let name = resource.type ? "DER" : "Transmission Grid";
 		BottomRightPanel.classList.remove("hidden");
-		BottomRightPanel.innerHTML = `
+		BottomRightPanelContent.innerHTML = `
 			<h1>${name}</h1>
 			${resource.type ? "<p>Type: "+resource.type+"</p>" : ""}
 			<p>Lat: ${Math.round(10000*resource.latlng[0])/10000}</p>
@@ -378,7 +378,7 @@ class Graph {
 	resourceOnEdit(event) {
 		let resource = event.target.data;
 		BottomRightPanel.classList.remove("hidden");
-		BottomRightPanel.innerHTML = `
+		BottomRightPanelContent.innerHTML = `
 			<h1>Resource #${this.resources.indexOf(resource)}</h1>
 			`;
 		let controls = d3.create("div");
@@ -430,7 +430,7 @@ class Graph {
 	branchOnInfo(event) {
 		let branch = event.target.branch;
 		BottomRightPanel.classList.remove("hidden");
-		BottomRightPanel.innerHTML =
+		BottomRightPanelContent.innerHTML =
 			`<h1>Branch #${this.branches.indexOf(branch)} </h1>
 			  <p>Connects nodes ${branch.nodes[0]} and ${branch.nodes[1]}</p>
 			`;
@@ -438,7 +438,7 @@ class Graph {
 	branchOnEdit(event) {
 		let branch = event.target.branch;
 		BottomRightPanel.classList.remove("hidden");
-		BottomRightPanel.innerHTML =
+		BottomRightPanelContent.innerHTML =
 			`<h1>Branch #${this.branches.indexOf(branch)} </h1>
 			  <p>Connects nodes ${branch.nodes[0]} and ${branch.nodes[1]}</p>
 			`;
@@ -662,7 +662,7 @@ class Graph {
 			this.topbar = topbar;
 			HUD.appendChild(topbar.node());
 			BottomRightPanel.classList.remove("hidden");
-			BottomRightPanel.innerHTML =
+			BottomRightPanelContent.innerHTML =
 			`<h1>Edit Mode</h1>
 			  <p>a: add node</p>
 			  <p>s: add branch</p>

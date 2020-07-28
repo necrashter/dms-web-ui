@@ -22,7 +22,11 @@
 
 @font-face {
 	font-family: Orbitron;
-	src: url("fonts/Orbitron.ttf");
+	src: url("fonts/Orbitron/Orbitron.ttf");
+}
+@font-face {
+	font-family: RobotoMono;
+	src: url("fonts/Roboto_Mono/RobotoMono-Regular.ttf");
 }
 
 html, body {
@@ -38,8 +42,6 @@ html, body {
 }
 
 #BottomRightPanel {
-	font-family: monospace;
-	font-size: 1.5em;
 	position: absolute;
 	width: 20em;
 	bottom: 0;
@@ -57,8 +59,18 @@ html, body {
 	visibility: hidden;
 	opacity: 0;
 }
-#BottomRightPanel > * {
-	margin: 0;
+#BottomRightPanel > .close {
+	position: absolute;
+	right: 0;
+	top: 0;
+	margin: 8px;
+	padding: 6px 14px;
+}
+#BottomRightPanel > .content {
+	margin-right: 2.5em;
+}
+#BottomRightPanel > .content > * {
+	margin: 3px;
 }
 
 #BottomRightPanel > h1 {
@@ -67,8 +79,6 @@ html, body {
 }
 
 #BottomLeftPanel {
-	font-family: monospace;
-    font-size: 1.25em;
     position: absolute;
     bottom: 0;
     left: 0;
@@ -76,7 +86,7 @@ html, body {
     color: var(--blue-fg);
     z-index: 500;
 	/*
-	font-family: monospace;
+	font-family: RobotoMono;
 	font-size: 1.5em;
 	position: absolute;
 	width: 20em;
@@ -146,8 +156,6 @@ html, body {
 
 
 #Tooltip {
-	font-family: monospace;
-	font-size: 1.5em;
 	position: absolute;
 	z-index: 990;
 	background: var(--blue-bg);
@@ -163,8 +171,6 @@ html, body {
 }
 
 #ContextMenu {
-	font-family: monospace;
-	font-size: 1.5em;
 	position: absolute;
 	z-index: 950;
 	background: var(--blue-bg);
@@ -257,6 +263,7 @@ h2 {
 	margin: 0.2em;
 	cursor: pointer;
 	text-align: center;
+	user-select: none;
 }
 
 .blockButton:hover {
@@ -304,7 +311,6 @@ button {
 	border: 0.15em solid var(--blue-border);
 	padding: 0.6em 1.2em;
 	margin: 0.2em;
-	font-family: monospace;
 	cursor: pointer;
 	text-align: center;
 }
@@ -385,7 +391,7 @@ button:hover {
 }
 
 .barWrap {
-	font: 15px monospace;
+	font: 15px RobotoMono;
 	text-align: right;
 	margin: 1em;
 }
@@ -441,7 +447,7 @@ input[type="text"] {
 	border: 0.15em solid var(--blue-border);
 	padding: 0.2em;
 	margin: 0.2em;
-	font-family: monospace;
+	font-family: RobotoMono;
 }
 
 #PanelContainer {
@@ -494,6 +500,7 @@ input[type="text"] {
 
 
 .selectList {
+	user-select: none;
 	border: 0.15em solid var(--blue-border);
 	margin: 2em 0em;
 	background: black;

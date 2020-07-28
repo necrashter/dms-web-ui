@@ -14,6 +14,7 @@
 }
 
 .customCheckbox {
+	user-select: none;
 }
 
 .customCheckbox label { cursor: pointer; }
