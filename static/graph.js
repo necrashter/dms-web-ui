@@ -153,10 +153,11 @@ class Graph {
 		 * where type is a string describing the type of DER or null for transmission grid
 		 */
 		this.resources = [];
-		this.requiredFields = ["nodes", "branches", "externalBranches", "resources"];
+		this.requiredFields = ["name", "nodes", "branches", "externalBranches", "resources", "view", "zoom"];
 		// this field becomes true if the user enters edit mode
 		// (modifies the graph)
 		this.dirty = false;
+		this.name = "unnamed"
 		Object.assign(this, options);
 		this.setEventHandlers();
 	}
@@ -219,8 +220,9 @@ class Graph {
 		};
 		reader.readAsText(file);
 	}	
-	getJson(indent=0) {
+	getJson() {
 		let g = {};
+		g.name = this.name;
 		g.nodes = this.nodes.map(n => {
 			return {
 				latlng: n.latlng,
@@ -237,11 +239,11 @@ class Graph {
 		g.resources = this.resources;
 		g.view = this.map.getCenter();
 		g.zoom = this.map.getZoom();
-		return JSON.stringify(g, null, indent);
+		return JSON.stringify(g, null, 4);
 	}
 	saveFile(filename=null) {
 		if(!filename) filename = "graph"+saveCount+".json";
-		downloadData(filename, this.getJson(4));
+		downloadData(filename, this.getJson());
 		saveCount++;
 	}
 
@@ -302,9 +304,12 @@ class Graph {
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
 			<p>Status: ${status}</p>
-			<p>Probability of Failure: ${pf ? pf : "Unknown"}</p>
+			<p>Probability of Failure: ${pf ? Math.round(10000*pf)/10000 : "Unknown"}</p>
 			<p>Connected to ${node.branches.length} branches.</p>
 			`;
+		if(policyView && policyView.nodeOnInfo) {
+			policyView.nodeOnInfo(node, BottomRightPanelContent);
+		}
 		if(node.externalBranches.length>0) {
 			BottomRightPanelContent.innerHTML += "<p>Connected to a resource.</p>";
 		}

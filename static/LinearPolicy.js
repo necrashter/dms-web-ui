@@ -1,19 +1,40 @@
-class LinearPolicy {
-	constructor(_graph, steps) {
-		this.graph = _graph;
-		this.steps = steps;
-		this.index = 0;
+
+/**
+ * best case steps for linear
+ */
+function getStepsFromPolicy(policy) {
+	let current = 0;
+	let states = [current];
+	while(current < policy.states.length){
+		let actions = policy.transitions[current];
+		let action = actions[policy.policy[current]];
+		let next = action[0][0] - 1;
+		if(next == current) break;
+		let nextState = policy.states[next];
+		if(!nextState) break;
+		states.push(next);
+		current = next;
+		currentState = nextState;
+	}
+	return states;
+}
+
+
+class LinearPolicy extends InteractivePolicy {
+	constructor(_graph, policy) {
+		super(_graph, policy);
+		this.steps = getStepsFromPolicy(policy);
+		this.goTo(0);
 	}
 	goTo(index) {
 		this.index = index;
-		let step = this.steps[index];
-		this.graph.setState(step);
+		this.setState(this.steps[this.index], null); //no next
 	}
 	getActivationList() {
-		let lastStep = this.steps[0];
+		let lastStep = this.states[this.steps[0]];
 		let output = [null];
 		for(let i = 1; i<this.steps.length; ++i) {
-			let step = this.steps[i];
+			let step = this.states[this.steps[i]];
 			let energizedNodes = [];
 			for(let j = 0; j<step.length; ++j) {
 				if(lastStep[j] === "U" && step[j] !== "U") {
@@ -31,7 +52,7 @@ class LinearPolicy {
 	 */
 	successProbability(index) {
 		let p = 1;
-		let step = this.steps[index];
+		let step = this.states[this.steps[index]];
 		for(let i=0; i<step.length; ++i) {
 			let status = step[i];
 			let node = this.graph.nodes[i];
@@ -44,7 +65,8 @@ class LinearPolicy {
 	getName(d, i) {
 		if(i == 0) return "Initial Status";
 		else {
-			let old = this.steps[i-1];
+			let old = this.states[this.steps[i-1]];
+			d = this.states[d];
 			let nodes = [];
 			for(let i =0; i<d.length; ++i) {
 				if(old[i] !== d[i]) nodes.push("#"+i);
@@ -158,6 +180,16 @@ class LinearPolicyView {
 				.transition().duration(500)
 				.style("opacity", 1);
 		}
+	}
+	nodeOnInfo(node, div) {
+		let p = this.policy.energizationProbabilities(node.index);
+		let index = p.lastIndexOf(0);
+		if(index < 0) return;
+		p = p.slice(index);
+		div = d3.select(div);
+		div.append("div").text("Probability of energization in...");
+		div.append("ul").selectAll("li").data(p).join("li")
+			.text((d,i) => `${i==p.length-1 ? (index+i)+"+" : i+index} steps: `+(Math.round(10000*d)/10000));
 	}
 	destroy() {
 		if(this.markerLayer) this.markerLayer.remove();

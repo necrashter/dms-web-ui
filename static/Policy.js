@@ -47,7 +47,8 @@ class InteractivePolicy {
 			this.end = false;
 		}
 		// set graph to the next state
-		this.setNext(next);
+		if(next === null) this.graph.setState(this.states[this.state]);
+		else this.setNext(next);
 	}
 	setNext(i) {
 		// represents which transition to take in the current action
@@ -88,28 +89,68 @@ class InteractivePolicy {
 	nextStateAvailable() {
 		return !this.end;
 	}
-}
 
-/**
- * best case steps for linear
- */
-function getStepsFromPolicy(policy) {
-	let current = 0;
-	let currentState = policy.states[current];
-	let states = [currentState];
-	while(current < policy.states.length){
-		let actions = policy.transitions[current];
-		let action = actions[policy.policy[current]];
-		let next = action[0][0] - 1;
-		if(next == current) break;
-		let nextState = policy.states[next];
-		if(!nextState) break;
-		states.push(nextState);
-		current = next;
-		currentState = nextState;
+	/**
+	 * Calculates the energization probability of the node at nodeIndex
+	 * in "depth" number of steps
+	 * recursive solution
+	 */
+	_energizationProbability(state, nodeIndex, depth) {
+		let s = this.states[state][nodeIndex]; //current state of the node
+		console.log(state)
+		if(depth==0) {
+			return (s === "D" || s === "U") ? 0 : 1;
+		}
+		if(s === "D") return 0;
+		if(s !== "U") return 1;
+		let actions = this.transitions[state];
+		let action = actions[this.policy[state]];
+		if(action.length == 1 && action[0][0]-1 == state) return 0;
+		return action.map(a => {
+			if(a[0]-1 == state) return 0;
+			return a[1]*this._energizationProbability(a[0]-1, nodeIndex, depth-1);
+		}).reduce((a,b) => a+b, 0);
 	}
-	console.log(states);
-	return states;
+	/**
+	 * Calculates the energization probability of the node at nodeIndex
+	 * iterative solution to calculate all steps
+	 */
+	_energizationProbabilities(state0, nodeIndex) {
+		let queue = [{
+			state: state0,
+			p: 1,
+			depth: 0,
+		}];
+		let results = [0];
+		while(queue.length > 0) {
+			let {state, p, depth} = queue.shift(); //fifo
+			if(typeof results[depth] === "undefined")
+				results[depth] = results[depth-1];
+			let s = this.states[state][nodeIndex]; //current state of the node
+			if(s === "D") continue; // nothing to see
+			if(s !== "U") results[depth] += p; //energized
+			else {
+				// energized
+				let actions = this.transitions[state];
+				let action = actions[this.policy[state]];
+				for(let a of action) {
+					if(a[0]-1 == state) continue;
+					queue.push({
+						state: a[0]-1,
+						p: p*a[1],
+						depth: depth+1,
+					});
+				}
+			} //end else
+		} // end while
+		return results;
+	}
+	energizationProbabilities(nodeIndex) {
+		return this._energizationProbabilities(this.state, nodeIndex);
+	}
+	energizationProbability(nodeIndex, depth) {
+		return this._energizationProbability(this.state, nodeIndex, depth);
+	}
 }
 
 function selectPolicyView(div, graph) {
@@ -135,9 +176,8 @@ function selectPolicyView(div, graph) {
 		div.append("div").classed("blockButton", true)
 			.text("Linear Mode")
 			.on("click", () => {
-				let steps = getStepsFromPolicy(policy);
 				policyView = new LinearPolicyView(graph, div,
-					new LinearPolicy(graph, steps));
+					new LinearPolicy(graph, policy));
 			});
 	}
 	function requestFreshPolicy() {
@@ -162,7 +202,9 @@ function selectPolicyView(div, graph) {
 	function getPolicy() {
 		div.html("Please Wait...");
 		if(graph.solutionFile && !graph.dirty) {
-			Network.get(graph.solutionFile).then(response => {
+			// force get new version
+			let url = graph.solutionFile + "?time="+ Date.now();
+			Network.get(url).then(response => {
 				console.log("Fetched premade policy:",graph.solutionFile);
 				loadPolicy(JSON.parse(response));
 			}).catch(error => {
@@ -293,6 +335,15 @@ class InteractivePolicyView {
 				this.goToPolicyStep(i);
 			});
 		*/
+	}
+	nodeOnInfo(node, div) {
+		div = d3.select(div);
+		let p = this.policy.energizationProbabilities(node.index);
+		let index = p.lastIndexOf(0);
+		p = p.slice(index);
+		div.append("div").text("Probability of energization in...");
+		div.append("ul").selectAll("li").data(p).join("li")
+			.text((d,i) => `${i==p.length-1 ? (index+i)+"+" : i+index} steps: `+(Math.round(10000*d)/10000));
 	}
 	destroy() {
 		if(this.markerLayer) this.markerLayer.remove();
