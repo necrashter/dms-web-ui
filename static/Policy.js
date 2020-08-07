@@ -232,12 +232,12 @@ function getPolicy(div, graph) {
 function selectPrioritizedNode(div, graph){
 	div.html("");
 	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
-	// id of the prioritized node
-	let prioritized = null;
+	// ids of the prioritized node
+	let prioritized = [];
 	let li;
 	let updateList = () => {
 		li.attr("class", (_, i) => {
-			if(i == prioritized) return "currentIndex";
+			if(prioritized.includes(i)) return "currentIndex";
 			else return "";
 		})
 	};
@@ -246,7 +246,7 @@ function selectPrioritizedNode(div, graph){
 	let createMarkers = () => {
 		if(markerLayer) markerLayer.remove();
 		markers = graph.nodes.map((node, i) => {
-			let pri = prioritized == i;
+			let pri = prioritized.includes(i);
 			let m = L.marker(node.latlng, {
 				icon: getDescriptionIcon(
 					"#"+i+" "+(pri ? "Prioritized" : "Normal"),
@@ -259,8 +259,12 @@ function selectPrioritizedNode(div, graph){
 		markerLayer = L.layerGroup(markers);
 		markerLayer.addTo(Map);
 	};
-	let selectFun = (node, i) => {
-		prioritized = i;
+	let selectFun = (_, i) => {
+		if(prioritized.includes(i)) {
+			prioritized.splice(prioritized.indexOf(i),1);
+		} else {
+			prioritized.push(i);
+		}
 		updateList();
 		createMarkers();
 	};
@@ -281,11 +285,14 @@ function selectPrioritizedNode(div, graph){
 		*/
 	updateList();
 	createMarkers();
+	cleanUp = () => {
+		if(markerLayer) markerLayer.remove();
+	}
 	div.append("p").text(`Info`);
 	div.append("div").classed("blockButton", true)
 		.text("Generate Policy")
 		.on("click", () => {
-			if(markerLayer) markerLayer.remove();
+			cleanUp();
 			requestNewPolicy(div, graph, {
 				prioritized: prioritized,
 			});

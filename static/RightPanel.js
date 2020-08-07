@@ -1,4 +1,6 @@
 
+var cleanUp = null;
+
 function getGraphIcon(name) {
 	let width = name.toString().length*6+40;
 	return L.divIcon({
@@ -35,6 +37,7 @@ function selectGraph(choices, prebody=null) {
 			.on("click", () => {
 				content.transition().duration(300).style("opacity", "0")
 					.on("end", () => {
+						if(cleanUp) cleanUp();
 						if(policyView && policyView.destroy) policyView.destroy();
 						policyView = null;
 						graph.clear();

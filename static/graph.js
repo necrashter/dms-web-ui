@@ -518,8 +518,9 @@ class Graph {
 			let branch = this.branches[i];
 			let route = branch.nodes.map(j => this.nodes[j].latlng);
 			let line;
-			let energized =  this.nodes[branch.nodes[0]].status > 0 &&
-					this.nodes[branch.nodes[1]].status > 0;
+			let energized = branch.energized;
+				//this.nodes[branch.nodes[0]].status > 0 &&
+				//	this.nodes[branch.nodes[1]].status > 0;
 			if (energized) {
 				if(this.mode == 0 && Settings.animateAnts) {
 					line = createEnergizedAntPath(route);
@@ -944,6 +945,7 @@ class Graph {
 			this.nodes[i].status = status === "D" ? -1 :
 				status === "U" ? 0 : 1;
 		}
+		this.branches.forEach(branch => branch.energized = false);
 		// TODO: this is not "deterministic"
 		// Setting directions
 		for(let externalBranch of this.externalBranches) {
@@ -953,13 +955,19 @@ class Graph {
 				let node = nodes.pop();
 				for(let b of this.nodes[node].branches) {
 					if(oldNodes.has(b.branch.nodes[0])) continue;
+					if(oldNodes.has(b.branch.nodes[1])) continue;
 					if(b.branch.nodes[0] == node) {
-						if(state[b.branch.nodes[1]] == state[node])
-							nodes.push(b.branch.nodes[1]);
-						continue;
-					}
-					if(state[b.branch.nodes[0]] == state[node]) {
-						nodes.push(b.branch.nodes[0]);
+						if(state[b.branch.nodes[1]] == state[node]) {
+							if(state[node] != "D" && state[node] != "U" &&
+								!nodes.includes(b.branch.nodes[1]))
+								b.branch.energized = true;
+							nodes.unshift(b.branch.nodes[1]);
+						}
+					} else if(state[b.branch.nodes[0]] == state[node]) {
+						if(state[node] != "D" && state[node] != "U" &&
+							!nodes.includes(b.branch.nodes[0]))
+							b.branch.energized = true;
+						nodes.unshift(b.branch.nodes[0]);
 						b.branch.nodes.reverse();
 					}
 				}
