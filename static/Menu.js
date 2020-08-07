@@ -3,6 +3,8 @@
 var Overlay = document.getElementById("Overlay");
 var HUD = document.getElementById("HUD");
 var MenuButton = document.getElementById("MenuButton");
+var PanelContainer = document.getElementById("PanelContainer");
+
 var attributionHTML = `
   <h1>Attributions</h1>
   <p>Icons made by <a href="http://www.freepik.com/" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a></p>
@@ -16,6 +18,7 @@ var attributionHTML = `
 
 Overlay.hide = function() {
 	Overlay.classList.add("hidden");
+	PanelContainer.classList.remove("disabled");
 }
 
 function generateCentredDiv() {
@@ -25,15 +28,27 @@ function generateCentredDiv() {
 	  <div id="CentredContent"></div>
 	</div>
 	`;
-	document.getElementById("OverlayClose").addEventListener("click", function () {
-		Overlay.classList.add("hidden");
-	});
+	document.getElementById("OverlayClose")
+		.addEventListener("click", Overlay.hide);
 	return document.getElementById("CentredContent");
 }
 
 function aboutButton() {
 	let inner = generateCentredDiv();
 	inner.innerHTML = attributionHTML;
+	Overlay.classList.remove("hidden");
+}
+function settingsButton() {
+	let inner = d3.select(generateCentredDiv());
+	inner.append("h1").text("Time Machine");
+	inner.append("p").text("Travel in time!");
+	let buttonDiv = inner.append("div");
+	buttonDiv.selectAll("div").data(Styles).join("div")
+		.classed("blockButton", true)
+		.text(d => d.name)
+		.on("click", d => {
+			changeStyle(d.folder)
+		});
 	Overlay.classList.remove("hidden");
 }
 
@@ -138,12 +153,14 @@ MenuButton.addEventListener("click", function() {
 			<div class="blockButton" onclick="Overlay.hide()">X</div>
 			<div class="block">
 				<div class="blockButton" onclick="statsButton()">Stats</div>
+				<div class="blockButton" onclick="settingsButton()">Settings</div>
 			</div>
 			<div class="blockButton" onclick="aboutButton()">About</div>
 		</div>
 		`;
 	statsButton();
 	Overlay.classList.remove("hidden");
+	PanelContainer.classList.add("disabled");
 });
 
 

@@ -177,7 +177,6 @@ html, body {
 	height: 100%;
         background-image: url("../assets/paper_page.png");
     transform: scaleY(-1.5) scaleX(1.2);
-    clip-path: polygon(0 0, 100% 0px, 100% 100%, 30px 100%, 0 calc(100% - 30px));
 	z-index: -1;
 }
 
@@ -231,8 +230,8 @@ html, body {
 	height: 100%;
 	opacity: 1;
 	transition: visibility 0.5s, opacity 0.5s;
-	z-index: 902;
-	background: var(--blue-dark-bg);
+	z-index: 932;
+	background: #040404B3;
 	color: var(--blue-fg);
 }
 
@@ -247,8 +246,6 @@ html, body {
 }
 
 #Centred {
-	border-right: 0.1em solid;
-    border-left: 0.1em solid;
 	width: 30em;
 	height: 100%;
 	margin: 0 auto;
@@ -257,7 +254,16 @@ html, body {
 	padding: 0;
 	left: 0;
 	right: 0;
-	background: var(--blue-dark-bg);
+}
+#Centred::before {
+	content: "";
+    position: absolute;
+    width: 124%;
+    height: 100%;
+    z-index: -1;
+    background-image: url("../assets/paper_page.png");
+    background-size: cover;
+    transform: translateX(-10%) scaleY(1.2);
 }
 #Overlay.warning #Centred {
 	background: var(--orange-dark-bg);
@@ -369,14 +375,26 @@ button:hover {
 #OverlayLeftBar {
 	width: 7em;
     height: 100%;
-    background: #022011c9;
     top: 0;
     position: absolute;
     padding: 0;
     left: 0;
-    border-right: 0.1em solid;
 	display: flex;
 	flex-direction: column;
+}
+
+#OverlayLeftBar::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	right: 0;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	background-image: url("../assets/paper_page.png");
+	transform: scaleY(-1.5) scaleX(-1.5);
+	z-index: -1;
 }
 
 #OverlayLeftBar > .block {
@@ -416,11 +434,11 @@ button:hover {
 }
 
 .contentBox {
-	margin: 2em;
-	padding: 1em;
-	color: var(--blue-fg);
-	background: #022011c9;
-	border: 0.1em solid;
+	margin: 1em;
+    padding: 2em;
+    color: var(--blue-fg);
+    background-image: url("../assets/paper_page.png");
+    background-size: cover;
 }
 
 .contentBox h1 {
@@ -533,6 +551,9 @@ input[type="text"] {
 	100% {
 		transform: perspective(2000px) rotate3d(0,1,0,90deg) scale(1.1);
 	}
+}
+.disabled #RightPanel::after {
+	animation-play-state: paused;
 }
 #RightPanel::after {
 	content: "";
