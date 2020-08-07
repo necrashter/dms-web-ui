@@ -572,7 +572,8 @@ input[type="text"] {
 
 #RightPanelContent {
 	position: relative;
-	padding: 1em;
+	padding: 0 1em;
+	/* idk why, but vertical padding breaks scroll y */
 	overflow-y: scroll;
 	z-index: 901;
 	height: 100%;
