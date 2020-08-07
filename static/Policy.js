@@ -41,13 +41,14 @@ class InteractivePolicy {
 		this.state = state;
 		this.actions = this.transitions[this.state];
 		this.action = this.actions[this.policy[this.state]];
-		if(this.action.length == 1 && this.action[0][0]-1 == this.state) {
-			this.end = true;
+		if(this.action) {
+			this.end = this.action.length == 1 && this.action[0][0]-1 == this.state;
 		} else {
-			this.end = false;
+			this.end = true;
 		}
 		// set graph to the next state
-		if(next === null) this.graph.setState(this.states[this.state]);
+		if(next === null || this.end)
+			this.graph.setState(this.states[this.state]);
 		else this.setNext(next);
 	}
 	setNext(i) {
@@ -153,69 +154,145 @@ class InteractivePolicy {
 	}
 }
 
-function selectPolicyView(div, graph) {
-	function loadPolicy(policy) {
-		// First make every bus "Unknown"
-		graph.nodes.forEach(node => {
-			node.status = 0;
-		});
-		graph.rerender();
+function loadPolicy(div, graph, policy, options={}) {
+	// First make every bus "Unknown"
+	graph.nodes.forEach(node => {
+		node.status = 0;
+	});
+	graph.rerender();
 
-		div.html("");
-		div.append("h3").text("Select Mode");
-		div.append("p").text(`Interactive Mode allows you to select the
+	if(options.prioritized) {
+		options.description = "Policy with node #"+
+			options.prioritized+" prioritized";
+	} else {
+		options.description = "Policy without any prioritization.";
+	}
+	div.html("");
+	div.append("h3").text("Select Mode");
+	div.append("p").text(`Interactive Mode allows you to select the
 				result of each step as you run the policy.`);
-		div.append("div").classed("blockButton", true)
-			.text("Interactive Mode")
-			.on("click", () => {
-				policyView = new InteractivePolicyView(graph, div,
-					new InteractivePolicy(graph, policy));
-			});
-		div.append("p").text(`In linear mode you will see the best case,
-				where the activation of every bus is successful.`);
-		div.append("div").classed("blockButton", true)
-			.text("Linear Mode")
-			.on("click", () => {
-				policyView = new LinearPolicyView(graph, div,
-					new LinearPolicy(graph, policy));
-			});
-	}
-	function requestFreshPolicy() {
-		console.log("requesting new policy...");
-		div.html("Waiting response from server...");
-		let json = graph.getJson();
-		Network.post("/policy", json).then(response => {
-			let policy = JSON.parse(response);
-			loadPolicy(policy);
-		})
-		.catch(error => {
-			div.html("");
-			div.append("b").text("Failed to get policy")
-				.style("color","red");
-			div.append("p").text(error)
-				.style("color","red");
-			div.append("div").classed("blockButton", true)
-				.text("Go Back")
-				.on("click", () => selectPolicyView(div, graph));
+	div.append("div").classed("blockButton", true)
+		.text("Interactive Mode")
+		.on("click", () => {
+			policyView = new InteractivePolicyView(graph, div,
+				new InteractivePolicy(graph, policy), options);
 		});
+	div.append("p").text(`In linear mode you will see the best case,
+				where the activation of every bus is successful.`);
+	div.append("div").classed("blockButton", true)
+		.text("Linear Mode")
+		.on("click", () => {
+			policyView = new LinearPolicyView(graph, div,
+				new LinearPolicy(graph, policy), options);
+		});
+}
+function requestNewPolicy(div, graph, settings={}) {
+	console.log("requesting new policy...");
+	div.html("Waiting response from server...");
+	let request = {
+		graph: graph.serialize(),
+	};
+	Object.assign(request, settings);
+	Network.post("/policy", JSON.stringify(request)).then(response => {
+		let policy = JSON.parse(response);
+		loadPolicy(div, graph, policy, settings);
+	}).catch(error => {
+		div.html("");
+		div.append("b").text("Failed to get policy")
+			.style("color","red");
+		div.append("p").text(error)
+			.style("color","red");
+		div.append("div").classed("blockButton", true)
+			.text("Go Back")
+			.on("click", () => selectPolicyView(div, graph));
+	});
+}
+/**
+ * Gets the premade policy from server if available,
+ * otherwise requests new policy
+ */
+function getPolicy(div, graph) {
+	div.html("Please Wait...");
+	if(graph.solutionFile && !graph.dirty) {
+		// force get new version
+		let url = graph.solutionFile + "?time="+ Date.now();
+		Network.get(url).then(response => {
+			console.log("Fetched premade policy:",graph.solutionFile);
+			loadPolicy(div, graph, JSON.parse(response));
+		}).catch(error => {
+			console.error("Error while getting premade policy",
+				graph.solutionFile,":",error);
+			requestNewPolicy(div, graph);
+		});
+	} else {
+		requestNewPolicy(div, graph);
 	}
-	function getPolicy() {
-		div.html("Please Wait...");
-		if(graph.solutionFile && !graph.dirty) {
-			// force get new version
-			let url = graph.solutionFile + "?time="+ Date.now();
-			Network.get(url).then(response => {
-				console.log("Fetched premade policy:",graph.solutionFile);
-				loadPolicy(JSON.parse(response));
-			}).catch(error => {
-				console.error("Error while getting premade policy",
-					graph.solutionFile,":",error);
-				requestFreshPolicy();
+}
+
+function selectPrioritizedNode(div, graph){
+	div.html("");
+	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
+	// id of the prioritized node
+	let prioritized = null;
+	let li;
+	let updateList = () => {
+		li.attr("class", (_, i) => {
+			if(i == prioritized) return "currentIndex";
+			else return "";
+		})
+	};
+	let markers = null;
+	let markerLayer = null;
+	let createMarkers = () => {
+		if(markerLayer) markerLayer.remove();
+		markers = graph.nodes.map((node, i) => {
+			let pri = prioritized == i;
+			let m = L.marker(node.latlng, {
+				icon: getDescriptionIcon(
+					"#"+i+" "+(pri ? "Prioritized" : "Normal"),
+					pri),
+				pane: "resources",
 			});
-		} else {
-			requestFreshPolicy();
-		}
-	}
+			m.on("click", () => selectFun(node, i));
+			return m;
+		});
+		markerLayer = L.layerGroup(markers);
+		markerLayer.addTo(Map);
+	};
+	let selectFun = (node, i) => {
+		prioritized = i;
+		updateList();
+		createMarkers();
+	};
+	let list = div.append("div")
+		.classed("selectList", true);
+	li = list.selectAll("div").data(graph.nodes).join("div")
+		.text((_, i) => "Node #"+i)
+		.on("click", selectFun)
+	/*
+		.on("mouseover", (_, i) => {
+			let icon = markers[i]._icon;
+			if(icon) icon.children[0].classList.add("hover");
+		})
+		.on("mouseout", (_, i) => {
+			let icon = markers[i]._icon;
+			if(icon) icon.children[0].classList.remove("hover");
+		});
+		*/
+	updateList();
+	createMarkers();
+	div.append("p").text(`Info`);
+	div.append("div").classed("blockButton", true)
+		.text("Generate Policy")
+		.on("click", () => {
+			if(markerLayer) markerLayer.remove();
+			requestNewPolicy(div, graph, {
+				prioritized: prioritized,
+			});
+		});
+}
+
+function selectPolicyView(div, graph) {
 	function createTrivialPolicy() {
 		//this.infoText = "A trivial policy has been generated.";
 		let policy = trivialPolicy(graph);
@@ -227,10 +304,17 @@ function selectPolicyView(div, graph) {
 				synthesize a trivial solution on the client-side for testing`);
 	div.append("div").classed("blockButton", true)
 		.text("Request Policy From Server")
-		.on("click", getPolicy);
+		.on("click", () => getPolicy(div, graph));
 	div.append("div").classed("blockButton", true)
 		.text("Synthesize Trivial Policy")
 		.on("click", createTrivialPolicy);
+	div.append("p").text(`Alternatively, you can select a prioritized
+			node and generate a policy.`);
+	div.append("div").classed("blockButton", true)
+		.text("Prioritize")
+		.on("click", () => {
+			selectPrioritizedNode(div, graph);
+		});
 }
 
 
@@ -240,10 +324,11 @@ class InteractivePolicyView {
 	 * Takes a graph and div.
 	 * div must be a d3 selection
 	 */
-	constructor(_graph, div, policy) {
+	constructor(_graph, div, policy, options={}) {
 		this.div = div;
 		this.graph = _graph;
 		this.policy = policy;
+		Object.assign(this, options);
 		this.policyNavigator();
 	}
 	setNext(i) {
@@ -275,6 +360,7 @@ class InteractivePolicyView {
 	policyNavigator() {
 		this.createMarkerLayer();
 		this.div.html("");
+		if(this.description) this.div.append("p").text(this.description);
 		let buttonDiv = this.div.append("div").classed("policyControls", true);
 		let prev = buttonDiv.append("div").classed("blockButton", true)
 			.text("Previous Step");

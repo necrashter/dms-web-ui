@@ -22,11 +22,11 @@
 
 @font-face {
 	font-family: Orbitron;
-	src: url("fonts/Orbitron/Orbitron.ttf");
+	src: url("../fonts/Orbitron/Orbitron.ttf");
 }
 @font-face {
 	font-family: RobotoMono;
-	src: url("fonts/Roboto_Mono/RobotoMono-Regular.ttf");
+	src: url("../fonts/Roboto_Mono/RobotoMono-Regular.ttf");
 }
 
 html, body {

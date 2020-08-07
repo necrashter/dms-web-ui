@@ -82,9 +82,10 @@ class LinearPolicyView {
 	 * Takes a graph and div.
 	 * div must be a d3 selection
 	 */
-	constructor(_graph, div, policy) {
+	constructor(_graph, div, policy, options={}) {
 		this.div = div;
 		this.graph = _graph;
+		Object.assign(this, options);
 		this.setPolicy(policy);
 	}
 	setPolicy(policy) {
@@ -117,6 +118,8 @@ class LinearPolicyView {
 	}
 	policyNavigator() {
 		this.div.html("");
+		if(this.description) this.div.append("p").text(this.description);
+		// deprecated?
 		if(this.infoText) this.div.append("p").text(this.infoText);
 		this.div.append("p")
 			.text(`You can use the buttons or 

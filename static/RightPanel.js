@@ -20,7 +20,11 @@ function selectGraph(choices, prebody=null) {
 	if(prebody) body.call(prebody);
 	body.append("p").text("Select a graph to load: ");
 	let list = body.append("div").classed("selectList", true);
+	let selected = false;
 	let selectFun = d => {
+		// make sure that it runs only once
+		if(selected) return;
+		selected = true;
 		d.load();
 		markerLayer.remove();
 		header.classed("disabled", true);
@@ -38,6 +42,10 @@ function selectGraph(choices, prebody=null) {
 						openSelectGraph();
 					});
 			});
+		/*
+		content.append("div").classed("blockButton", true)
+			.text("Select Another Policy")
+		*/
 		content.append("h1").text("2. Synthesize Policy");
 		selectPolicyView(content.append("div"), graph);
 		//policyView = new PolicyView(graph, content.append("div"));

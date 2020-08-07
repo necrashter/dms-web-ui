@@ -219,8 +219,11 @@ class Graph {
 			}
 		};
 		reader.readAsText(file);
-	}	
-	getJson() {
+	}
+	/**
+	 * Converts the graph into a serialized object, ready to stringify
+	 */
+	serialize() {
 		let g = {};
 		g.name = this.name;
 		g.nodes = this.nodes.map(n => {
@@ -239,7 +242,14 @@ class Graph {
 		g.resources = this.resources;
 		g.view = this.map.getCenter();
 		g.zoom = this.map.getZoom();
-		return JSON.stringify(g, null, 4);
+		return g;
+	}
+	/**
+	 * Returns the JSON.stringified version of the serialized graph
+	 * Indented.
+	 */
+	getJson() {
+		return JSON.stringify(this.serialize(), null, 4);
 	}
 	saveFile(filename=null) {
 		if(!filename) filename = "graph"+saveCount+".json";
