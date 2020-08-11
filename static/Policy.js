@@ -106,6 +106,7 @@ class InteractivePolicy {
 		if(s !== "U") return 1;
 		let actions = this.transitions[state];
 		let action = actions[this.policy[state]];
+		if(!action) return 0;
 		if(action.length == 1 && action[0][0]-1 == state) return 0;
 		return action.map(a => {
 			if(a[0]-1 == state) return 0;
@@ -134,6 +135,7 @@ class InteractivePolicy {
 				// energized
 				let actions = this.transitions[state];
 				let action = actions[this.policy[state]];
+				if(!action) continue;
 				for(let a of action) {
 					if(a[0]-1 == state) continue;
 					queue.push({
@@ -145,6 +147,10 @@ class InteractivePolicy {
 			} //end else
 		} // end while
 		return results;
+	}
+	isEnergized(nodeIndex) {
+		let status = this.states[this.state][nodeIndex];
+		return status != "D" && status != "U";
 	}
 	energizationProbabilities(nodeIndex) {
 		return this._energizationProbabilities(this.state, nodeIndex);
@@ -163,7 +169,8 @@ function loadPolicy(div, graph, policy, options={}) {
 
 	if(options.prioritized) {
 		options.description = "Policy with node #"+
-			options.prioritized+" prioritized";
+			options.prioritized+" prioritized using "+
+			options.algo + " algorithm";
 	} else {
 		options.description = "Policy without any prioritization.";
 	}
@@ -448,10 +455,11 @@ class InteractivePolicyView {
 		*/
 	}
 	nodeOnInfo(node, div) {
+		if(this.policy.isEnergized(node)) return;
 		div = d3.select(div);
 		let p = this.policy.energizationProbabilities(node.index);
 		let index = p.lastIndexOf(0);
-		p = p.slice(index);
+		p = p.slice(index, p.indexOf(p[p.length-1])+1);
 		div.append("div").text("Probability of energization in...");
 		div.append("ul").selectAll("li").data(p).join("li")
 			.text((d,i) => `${i==p.length-1 ? (index+i)+"+" : i+index} steps: `+(Math.round(10000*d)/10000));

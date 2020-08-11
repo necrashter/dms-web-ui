@@ -12,3 +12,14 @@ function changeStyle(folderName) {
 	document.getElementById("custom-select-css").href= folderName+"/CustomSelect.css";
 	document.getElementById("custom-checkbox-css").href = folderName+"/CustomCheckbox.css";
 }
+
+
+BottomRightPanel.show = function(info=null) {
+	BottomRightPanel.contentInfo = info;
+	BottomRightPanel.classList.remove("hidden");
+}
+
+BottomRightPanel.hide = function() {
+	BottomRightPanel.contentInfo = null;
+	BottomRightPanel.classList.add("hidden");
+}
