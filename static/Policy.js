@@ -232,6 +232,23 @@ function getPolicy(div, graph) {
 function selectPrioritizedNode(div, graph){
 	div.html("");
 	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
+	let algorithms = [
+		{ name: "S3P", value: "s3p" },
+		{ name: "Cost Modification", value: "costmod" },
+	];
+	let selectedAlgo = 0;
+	let algoDiv = div.append("div");
+	let algoDivs = algoDiv.selectAll("div").data(algorithms).join("div")
+		.classed("customCheckbox", true)
+		.classed("radio", true);
+	algoDivs.append("input")
+		.attr("type", "radio")
+		.attr("name", "algos")
+		.attr("id", d => "algo-"+d.value)
+		.on("change", (_, i) => selectedAlgo = i);
+	algoDivs.append("label")
+		.text(d => "Use "+d.name)
+		.attr("for", d => "algo-"+d.value);
 	// ids of the prioritized node
 	let prioritized = [];
 	let li;
@@ -295,6 +312,7 @@ function selectPrioritizedNode(div, graph){
 			cleanUp();
 			requestNewPolicy(div, graph, {
 				prioritized: prioritized,
+				algo: algorithms[selectedAlgo].value,
 			});
 		});
 }
