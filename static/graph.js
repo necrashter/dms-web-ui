@@ -368,7 +368,7 @@ class Graph {
 				node.status = status.value;
 				this.rerender();
 			});
-		BottomRightPanel.appendChild(controls.node());
+		BottomRightPanelContent.appendChild(controls.node());
 	}
 	resourceOnMouseOver(event) {
 		this.lastHover.type = "resource";
@@ -422,7 +422,7 @@ class Graph {
 				lngInput.property("value", resource.latlng[1]);
 				this.rerender();
 			});
-		BottomRightPanel.appendChild(controls.node());
+		BottomRightPanelContent.appendChild(controls.node());
 	}
 	resourceOnMouseOut(event) {
 		this.lastHover.hovered = false;
@@ -469,7 +469,7 @@ class Graph {
 				branch.nodes.reverse();
 				this.rerender();
 			});
-		BottomRightPanel.appendChild(controls.node());
+		BottomRightPanelContent.appendChild(controls.node());
 	}
 	branchOnMouseOut (event) {
 		this.lastHover.hovered = false;
@@ -648,6 +648,7 @@ class Graph {
 		if(this.mode == mode) return;
 		this.mode = mode;
 		if(this.mode == 1) {
+			resetPolicyScreen();
 			this.dirty = true;
 			TopLeftPanel.classList.add("warning");
 			TopLeftPanel.innerText = "EDIT MODE";

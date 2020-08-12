@@ -167,12 +167,17 @@ function loadPolicy(div, graph, policy, options={}) {
 	});
 	graph.rerender();
 
-	if(options.prioritized) {
-		options.description = "Policy with node #"+
-			options.prioritized+" prioritized using "+
-			options.algo + " algorithm";
-	} else {
-		options.description = "Policy without any prioritization.";
+	options.prelude = d => {
+		let ul = d.append("ul");
+		if(options.prioritized) {
+			ul.append("li").text("Prioritized nodes: " + options.prioritized);
+			ul.append("li").text("Prioritization Algorithm: " + options.algo);
+		} else {
+			ul.append("li").text("No prioritization");
+		}
+		let horizon = "Default";
+		if(options.conf) horizon = options.conf.horizon;
+		ul.append("li").text("Horizon: "+horizon);
 	}
 	div.html("");
 	div.append("h3").text("Select Mode");
@@ -239,6 +244,9 @@ function getPolicy(div, graph) {
 function selectPrioritizedNode(div, graph){
 	div.html("");
 	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
+	let horizon = createTextInput(div, "Horizon", 10);
+	let errorDiv = div.append("p").text("")
+		.style("color", "red");
 	let algorithms = [
 		{ name: "S3P", value: "s3p" },
 		{ name: "Cost Modification", value: "costmod" },
@@ -316,10 +324,40 @@ function selectPrioritizedNode(div, graph){
 	div.append("div").classed("blockButton", true)
 		.text("Generate Policy")
 		.on("click", () => {
+			horizonValue = parseInt(horizon.property("value"));
+			if(isNaN(horizonValue)) {
+				errorDiv.text("Invalid horizon");
+				return;
+			}
 			cleanUp();
 			requestNewPolicy(div, graph, {
 				prioritized: prioritized,
 				algo: algorithms[selectedAlgo].value,
+				conf: {
+					horizon: horizonValue,
+				}
+			});
+		});
+}
+
+function selectPolicyOptions(div, graph){
+	div.html("");
+	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
+	let horizon = createTextInput(div, "Horizon", 10);
+	let errorDiv = div.append("p").text("")
+		.style("color", "red");
+	div.append("div").classed("blockButton", true)
+		.text("Generate Policy")
+		.on("click", () => {
+			horizonValue = parseInt(horizon.property("value"));
+			if(isNaN(horizonValue)) {
+				errorDiv.text("Invalid horizon");
+				return;
+			}
+			requestNewPolicy(div, graph, {
+				conf: {
+					horizon: horizonValue,
+				}
 			});
 		});
 }
@@ -331,22 +369,24 @@ function selectPolicyView(div, graph) {
 		policyView = new TrivialPolicyView(graph, div, policy);
 	}
 	div.html("");
+	div.append("div").classed("blockButton", true)
+		.text("No Prioritization")
+		.on("click", () => {
+			selectPolicyOptions(div, graph);
+		});
+	div.append("div").classed("blockButton", true)
+		.text("Prioritize")
+		.on("click", () => {
+			selectPrioritizedNode(div, graph);
+		});
 	div.append("p")
-		.text(`You can either request a solution from the server, or
-				synthesize a trivial solution on the client-side for testing`);
+		.text(`Deprecated buttons`);
 	div.append("div").classed("blockButton", true)
 		.text("Request Policy From Server")
 		.on("click", () => getPolicy(div, graph));
 	div.append("div").classed("blockButton", true)
 		.text("Synthesize Trivial Policy")
 		.on("click", createTrivialPolicy);
-	div.append("p").text(`Alternatively, you can select a prioritized
-			node and generate a policy.`);
-	div.append("div").classed("blockButton", true)
-		.text("Prioritize")
-		.on("click", () => {
-			selectPrioritizedNode(div, graph);
-		});
 }
 
 
@@ -392,7 +432,7 @@ class InteractivePolicyView {
 	policyNavigator() {
 		this.createMarkerLayer();
 		this.div.html("");
-		if(this.description) this.div.append("p").text(this.description);
+		if(this.prelude) this.prelude(this.div);
 		let buttonDiv = this.div.append("div").classed("policyControls", true);
 		let prev = buttonDiv.append("div").classed("blockButton", true)
 			.text("Previous Step");
@@ -421,7 +461,8 @@ class InteractivePolicyView {
 					else return "";
 				})
 			}
-			let li = transitionList.selectAll("div").data(this.policy.action).join("div")
+			let li = transitionList.selectAll("div")
+				.data(this.policy.action).join("div")
 				.html(this.policy.describeAction.bind(this.policy))
 				.on("click", (_, i) => {
 					this.setNext(i);
@@ -438,21 +479,6 @@ class InteractivePolicyView {
 			this.div.append("p")
 				.text("No more actions are available.");
 		}
-		// lists policy steps
-		// TODO
-		/*
-		let stepList = this.div.append("div").classed("selectList", true);
-		stepList.selectAll("div").data(this.policy.steps).join("div")
-			.text(this.policy.getName)
-			.attr("class", (_, i) => {
-				if(i > this.policy.index) return "disabled";
-				else if(i == this.policy.index) return "currentIndex";
-				else return "";
-			})
-			.on("click", (_, i) => {
-				this.goToPolicyStep(i);
-			});
-		*/
 	}
 	nodeOnInfo(node, div) {
 		if(this.policy.isEnergized(node)) return;
@@ -467,4 +493,10 @@ class InteractivePolicyView {
 	destroy() {
 		if(this.markerLayer) this.markerLayer.remove();
 	}
+}
+
+function removePolicy() {
+	if(cleanUp) cleanUp();
+	if(policyView && policyView.destroy) policyView.destroy();
+	policyView = null;
 }

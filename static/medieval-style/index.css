@@ -7,11 +7,11 @@
 	--reverse-blue-bg: #0000009e;
 	--reverse-blue-fg: #D2BFA8;
 
-	--orange-bg: #1E0E03BA;
-	--orange-dark-bg: #1E0E03CA;
-	--orange-fg: #ff935e;
-	--orange-text-shadow: #fae327;
-	--orange-border: rgba( 255, 255, 0, 0.7 );
+	--orange-bg: #000000C9;
+	--orange-dark-bg: #000000C9;
+	--orange-fg: #bf0000;
+	--orange-text-shadow: #ff1f1f;
+	--orange-border: rgba(255, 0, 48, 0.7);
 
 	--reverse-orange-bg: #ff935eBA;
 	--reverse-orange-fg: #1E0E03;
@@ -49,14 +49,27 @@ html, body {
 	position: absolute;
 	width: 20em;
 	bottom: 0;
-	right: 0;
+	right: 2em;
 	background: var(--blue-bg);
 	color: var(--blue-fg);
 	z-index: 500;
 	padding: 1em;
-	margin: 0.5em;
-	clip-path: polygon(30px 0, 100% 0px, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px);
+	margin: 0;
 	transition: visibility 0.25s, opacity 0.25s;
+}
+#BottomRightPanel::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	right: 0;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+        background-image: url("../assets/paper_page.png");
+    transform: scaleY(1.5) scaleX(1.2);
+	z-index: -1;
+	pointer-events: none;
 }
 
 #BottomRightPanel.hidden {
@@ -135,6 +148,7 @@ html, body {
 }
 
 #TopLeftPanel::before {
+	pointer-events: none;
 	content: "";
 	position: absolute;
 	top: 0;
@@ -167,6 +181,7 @@ html, body {
 }
 
 #TopRightPanel::before {
+	pointer-events: none;
 	content: "";
 	position: absolute;
 	top: 0;
@@ -175,7 +190,7 @@ html, body {
 	padding: 0;
 	width: 100%;
 	height: 100%;
-        background-image: url("../assets/paper_page.png");
+	background-image: url("../assets/paper_page.png");
     transform: scaleY(-1.5) scaleX(1.2);
 	z-index: -1;
 }
@@ -188,10 +203,20 @@ html, body {
 #Tooltip {
 	position: absolute;
 	z-index: 990;
-	background: var(--blue-bg);
 	color: var(--blue-fg);
 	transition: visibility 0.2s, opacity 0.2s, transform 0.3s;
 	padding: 0.5em;
+}
+#Tooltip::before {
+	pointer-events: none;
+	content: "";
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	z-index: -1;
+	background-image: url("../assets/paper_page.png");
+	transform: scale(1.2);
+	background-size: 100% 100%;
 }
 
 #Tooltip.hidden {
@@ -384,6 +409,7 @@ button:hover {
 }
 
 #OverlayLeftBar::before {
+	pointer-events: none;
 	content: "";
 	position: absolute;
 	top: 0;
@@ -532,6 +558,7 @@ input[type="text"] {
 }
 
 #RightPanel::before {
+	pointer-events: none;
 	content: "";
 	position: absolute;
 	width: 100%;

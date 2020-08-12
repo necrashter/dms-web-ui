@@ -118,9 +118,7 @@ class LinearPolicyView {
 	}
 	policyNavigator() {
 		this.div.html("");
-		if(this.description) this.div.append("p").text(this.description);
-		// deprecated?
-		if(this.infoText) this.div.append("p").text(this.infoText);
+		if(this.prelude) this.prelude(this.div);
 		this.div.append("p")
 			.text(`You can use the buttons or 
 				click on a step to jump directly to it.`);

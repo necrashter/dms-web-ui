@@ -1,5 +1,6 @@
 
 var cleanUp = null;
+var resetPolicyScreen;
 
 function getGraphIcon(name) {
 	let width = name.toString().length*6+40;
@@ -37,21 +38,23 @@ function selectGraph(choices, prebody=null) {
 			.on("click", () => {
 				content.transition().duration(300).style("opacity", "0")
 					.on("end", () => {
-						if(cleanUp) cleanUp();
-						if(policyView && policyView.destroy) policyView.destroy();
-						policyView = null;
+						removePolicy();
 						graph.clear();
 						graph = null;
 						openSelectGraph();
 					});
 			});
-		/*
+		let policyDiv;
+		resetPolicyScreen = () => {
+				removePolicy();
+				selectPolicyView(policyDiv, graph);
+			};
 		content.append("div").classed("blockButton", true)
-			.text("Select Another Policy")
-		*/
+			.text("New policy")
+			.on("click", resetPolicyScreen);
 		content.append("h1").text("2. Synthesize Policy");
-		selectPolicyView(content.append("div"), graph);
-		//policyView = new PolicyView(graph, content.append("div"));
+		policyDiv = content.append("div");
+		selectPolicyView(policyDiv, graph);
 	};
 	markers = choices.map((g,i) => {
 		let m = L.marker(g.view, {
