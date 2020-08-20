@@ -120,7 +120,22 @@ html, body {
 	text-shadow: 0 0 5px var(--blue-text-shadow);
 	transition: 0.4s;
 }
+#TopLeftPanel::after {
+	content: '';
+	position: absolute;
+	top: 2px;
+	left: 1px;
+	width: calc(100% - 2px);
+	height: 50%;
+	background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(255,255,255,0.1));
+	border-radius: 2px;
+	z-index: -1;
+	transition: opacity 0.4s;
+}
 
+#TopLeftPanel.warning::after {
+	opacity: 0.8;
+}
 #TopLeftPanel.warning {
 	background: var(--orange-bg);
 	color: var(--orange-fg);
@@ -154,7 +169,7 @@ html, body {
 }
 
 #LatLang {
-	text-shadow: 0 0 5px var(--blue-text-shadow);
+	/* text-shadow: 0 0 5px var(--blue-text-shadow); */
 }
 
 
@@ -163,14 +178,17 @@ html, body {
 	z-index: 990;
 	background: var(--blue-bg);
 	color: var(--blue-fg);
-	transition: visibility 0.2s, opacity 0.2s, transform 0.3s;
+	transition: visibility 0.4s, opacity 0.4s, transform 0.3s;
 	padding: 0.5em;
+	/* background: linear-gradient(to top, #9f9f9f , var(--blue-bg)); */
+	box-shadow: inset 0px 0px 16px 0px rgba(0,0,0,0.40), 0 0 4px 1px black;
+	border-radius: 8px;
 }
 
 #Tooltip.hidden {
 	visibility: hidden;
 	opacity: 0;
-	transform: scaleY(0.1);
+	/* transform: scaleY(0.1); */
 }
 
 #ContextMenu {
@@ -295,7 +313,6 @@ h2 {
 	opacity: 0;
 }
 .warning .blockButton {
-	border: 0.15em solid var(--orange-border);
 	text-shadow: 0 0 3px var(--orange-text-shadow);
 	background: var(--orange-dark-bg);
 	color: var(--orange-fg);
@@ -306,10 +323,7 @@ h2 {
 }
 
 .blockButton.disabled {
-	text-shadow: none;
     color: gray;
-	/* TODO: var? */
-	border: 0.15em solid gray;
 	cursor: not-allowed;
 }
 .blockButton.disabled:hover {
@@ -318,7 +332,6 @@ h2 {
 }
 
 .blockButton.alt {
-	border: 0.15em solid var(--orange-border);
 	text-shadow: 0 0 3px var(--orange-text-shadow);
 	background: var(--orange-dark-bg);
 	color: var(--orange-fg);
@@ -463,7 +476,6 @@ input[type="file"] {
 }
 
 input[type="text"] {
-	text-shadow: 0 0 5px var(--blue-text-shadow);
 	background: var(--blue-dark-bg);
 	color: var(--blue-fg);
 	padding: 0.2em;
