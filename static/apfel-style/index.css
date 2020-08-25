@@ -573,12 +573,9 @@ input[type="text"] {
 	padding-left: 3em;
 }
 
+.selectList > div.hover,
 .selectList > div:hover {
 	background: var(--dark-accent);
-	color: var(--reverse-blue-fg);
-}
-.selectList > div.hover {
-	background: var(--reverse-blue-bg);
 	color: var(--reverse-blue-fg);
 }
 
