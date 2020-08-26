@@ -119,6 +119,10 @@ class LinearPolicyView {
 	policyNavigator() {
 		this.div.html("");
 		if(this.prelude) this.prelude(this.div);
+		if(this.policy.duration) {
+			this.div.append("p")
+				.text("Elapsed time: "+this.policy.duration);
+		}
 		this.div.append("p")
 			.text(`You can use the buttons or 
 				click on a step to jump directly to it.`);

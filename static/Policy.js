@@ -344,6 +344,10 @@ function selectPolicyOptions(div, graph){
 	div.html("");
 	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
 	let horizon = createTextInput(div, "Horizon", 10);
+	let shortSighted = false;
+	createCheckbox(div, "Short-sighted", val => {
+		shortSighted = val;
+	});
 	let errorDiv = div.append("p").text("")
 		.style("color", "red");
 	div.append("div").classed("blockButton", true)
@@ -357,7 +361,8 @@ function selectPolicyOptions(div, graph){
 			requestNewPolicy(div, graph, {
 				conf: {
 					horizon: horizonValue,
-				}
+				},
+				shortsighted: shortSighted,
 			});
 		});
 }
@@ -433,6 +438,10 @@ class InteractivePolicyView {
 		this.createMarkerLayer();
 		this.div.html("");
 		if(this.prelude) this.prelude(this.div);
+		if(this.policy.duration) {
+			this.div.append("p")
+				.text("Elapsed time: "+this.policy.duration);
+		}
 		let buttonDiv = this.div.append("div").classed("policyControls", true);
 		let prev = buttonDiv.append("div").classed("blockButton", true)
 			.text("Previous Step");

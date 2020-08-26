@@ -37,43 +37,6 @@ Icons.crosshair = L.icon({
     iconAnchor:   IconAnchor, // point of the icon which will correspond to marker's location
 });
 
-function createTextInput(target, name, value) {
-	let div = target.append("div");
-	div.append("label").attr("for", name).text(name+":");
-	let input = div.append("input").attr("type", "text").property("value", value);
-	return input;
-}
-
-function createSelectBox(target, data, name, value) {
-	let info = {value: value};
-	let currentName = data.find(d => d.value == value).name;
-	let div = target.append("div").style("display", 'flex');
-	div.append("label").text(name+":");
-	var innerDiv;
-	const wrapperDiv = div.append("div")
-		.attr("class","CustomSelect")
-		.style("flex-grow", 1);
-	var headDiv = wrapperDiv.append("div")
-		.attr("class", "CustomSelectHead")
-		.text(currentName)
-		.on("click", function() {
-			innerDiv.classList.toggle("open");
-		}).node();
-	const ul = wrapperDiv.append("div").attr("class", "CustomSelectList")
-		.append("div");
-	innerDiv = ul.node();
-
-	ul.selectAll("div").data(data).join("div")
-		.attr("class", "CustomSelectElement")
-		.text(d => d.name)
-		.on("click", d => {
-			info.value = d.value;
-			headDiv.innerText=d.name;
-			innerDiv.classList.remove("open");
-		});
-	return info;
-}
-
 
 // graph helper functions
 
