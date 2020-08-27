@@ -1,5 +1,6 @@
 :root {
 	--blue-bg: #e2e0e2;
+	--blue-bga: #9f9f9f;
 	--blue-fg: black;
 	--blue-text-shadow: #070a0b8f;
 	--blue-dark-bg: #f1f1f1;
@@ -20,6 +21,22 @@
 
 	--accent: #7ebce5;
 	--dark-accent: #5e9cc5;
+
+	--light-grad-top: rgba(255,255,255,0.8);
+	--light-grad-bottom: rgba(255,255,255,0.1);
+
+	--shadow: rgba(0,0,0,0.6);
+	--light-shadow: rgba(0,0,0,0.4);
+
+	--bar-bg: rgba( 200, 255, 215, 0.8 );
+	--bar-fg: #031E11;
+
+	--grad-light: #a4a4a4;
+
+	--disabled-box-fg: #888;
+	--disabled-box-fg: #ccc;
+
+	--marker-bg: #0743dfab;
 }
 
 @font-face {
@@ -54,8 +71,8 @@ html, body {
 	padding: 1em;
 	transition: visibility 0.25s, opacity 0.25s;
 	border-radius: 2em 0 0 0;
-	background: linear-gradient(to top, #9f9f9f , var(--blue-bg));
-	box-shadow: inset 0px 0px 16px 0px rgba(0,0,0,0.40);
+	background: linear-gradient(to top, var(--blue-bga) , var(--blue-bg));
+	box-shadow: inset 0px 0px 16px 0px var(--light-shadow);
 }
 
 #BottomRightPanel.hidden {
@@ -114,8 +131,8 @@ html, body {
 	width: 10em;
 	z-index: 500;
 	border-radius: 0 0 1em 0;
-	background: linear-gradient(to top, #9f9f9f , var(--blue-bg));
-	box-shadow: inset 0px 0px 16px 0px rgba(0,0,0,0.40);
+	background: linear-gradient(to top, var(--blue-bga) , var(--blue-bg));
+	box-shadow: inset 0px 0px 16px 0px var(--light-shadow);
 	color: var(--blue-fg);
 	text-shadow: 0 0 5px var(--blue-text-shadow);
 	transition: 0.4s;
@@ -127,7 +144,7 @@ html, body {
 	left: 1px;
 	width: calc(100% - 2px);
 	height: 50%;
-	background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(255,255,255,0.1));
+	background: linear-gradient(to bottom, var(--light-grad-top), var(--light-grad-bottom));
 	border-radius: 2px;
 	z-index: -1;
 	transition: opacity 0.4s;
@@ -162,8 +179,8 @@ html, body {
 	padding: 0;
 	width: 100%;
 	height: 100%;
-	background: linear-gradient(to top, #9f9f9f , var(--blue-bg));
-	box-shadow: inset 0px 0px 16px 0px rgba(0,0,0,0.40);
+	background: linear-gradient(to top, var(--blue-bga) , var(--blue-bg));
+	box-shadow: inset 0px 0px 16px 0px var(--light-shadow);
 	border-radius: 0 0 0 1em;
 	z-index: -1;
 }
@@ -180,8 +197,8 @@ html, body {
 	color: var(--blue-fg);
 	transition: visibility 0.4s, opacity 0.4s, transform 0.3s;
 	padding: 0.5em;
-	/* background: linear-gradient(to top, #9f9f9f , var(--blue-bg)); */
-	box-shadow: inset 0px 0px 16px 0px rgba(0,0,0,0.40), 0 0 4px 1px black;
+	/* background: linear-gradient(to top, var(--blue-bga) , var(--blue-bg)); */
+	box-shadow: inset 0px 0px 16px 0px var(--light-shadow), 0 0 4px 1px black;
 	border-radius: 8px;
 }
 
@@ -221,7 +238,7 @@ html, body {
 	opacity: 1;
 	transition: visibility 0.5s, opacity 0.5s;
 	z-index: 700;
-	background: rgba(0,0,0, 0.6);
+	background: var(--shadow);
 	color: var(--blue-fg);
 }
 
@@ -246,8 +263,8 @@ html, body {
 	padding: 0;
 	left: 0;
 	right: 0;
-	background: linear-gradient(to top, #9f9f9f , var(--blue-bg));
-	box-shadow: inset 0px 0px 16px 0px rgba(0,0,0,0.40);
+	background: linear-gradient(to top, var(--blue-bga) , var(--blue-bg));
+	box-shadow: inset 0px 0px 16px 0px var(--light-shadow);
 }
 #Overlay.warning #Centred {
 	background: var(--orange-dark-bg);
@@ -277,7 +294,7 @@ h2 {
 .blockButton {
 	/* text-shadow: 0 0 5px var(--blue-text-shadow); */
 	/* background: var(--blue-dark-bg); */
-	background: linear-gradient(to top, var(--blue-dark-bg), #a4a4a4);
+	background: linear-gradient(to top, var(--blue-dark-bg), var(--grad-light));
 	color: var(--blue-fg);
 	padding: 0.6em 1.2em;
 	margin: 0.2em;
@@ -285,7 +302,7 @@ h2 {
 	text-align: center;
 	user-select: none;
 	border-radius: 32px;
-	box-shadow: inset 0px 0px 2px 2px rgba(0,0,0,0.60), inset 0px 0px 12px 0px rgba(0,0,0,0.40);
+	box-shadow: inset 0px 0px 2px 2px var(--shadow), inset 0px 0px 12px 0px var(--light-shadow);
 	position: relative;
 	z-index: 0;
 	/* overflow: hidden; */
@@ -297,7 +314,7 @@ h2 {
 	left: 10px;
 	width: calc(100% - 20px);
 	height: 50%;
-	background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(255,255,255,0.1));
+	background: linear-gradient(to bottom, var(--light-grad-top), var(--light-grad-bottom));
 	border-radius: 32px;
 	z-index: -1;
 }
@@ -373,8 +390,8 @@ button:hover {
     left: 0;
 	display: flex;
 	flex-direction: column;
-	background: linear-gradient(to top, #9f9f9f , var(--blue-bg));
-	box-shadow: inset 0px 0px 16px 0px rgba(0,0,0,0.40);
+	background: linear-gradient(to top, var(--blue-bga) , var(--blue-bg));
+	box-shadow: inset 0px 0px 16px 0px var(--light-shadow);
 }
 
 #OverlayLeftBar > .block {
@@ -417,8 +434,8 @@ button:hover {
 	padding: 1em;
 	color: var(--blue-fg);
 	border-radius: 2em;
-	background: linear-gradient(to top, #9f9f9f , var(--blue-bg));
-	box-shadow: inset 0px 0px 16px 0px rgba(0,0,0,0.40);
+	background: linear-gradient(to top, var(--blue-bga) , var(--blue-bg));
+	box-shadow: inset 0px 0px 16px 0px var(--light-shadow);
 }
 
 .contentBox h1 {
@@ -444,8 +461,8 @@ button:hover {
 
 .horizontalBarWrap .horizontalBar {
 	padding: 0;
-	background: rgba( 200, 255, 215, 0.8 );
-	color: #031E11;
+	background: var(--bar-bg);
+	color: var(--var-fg);
 	overflow: hidden;
 	height: 1.6em;
 }
@@ -506,7 +523,7 @@ input[type="text"] {
 	background: var(--blue-bg);
 	color: var(--blue-fg);
 	overflow-y: scroll;
-	box-shadow: inset 10px 0px 16px 0px rgba(0,0,0,0.40);
+	box-shadow: inset 10px 0px 16px 0px var(--light-shadow);
 	padding-left: 0.5em;
 }
 

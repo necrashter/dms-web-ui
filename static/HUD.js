@@ -3,7 +3,8 @@ const BottomRightPanelContent = BottomRightPanel.querySelector(".content");
 
 const Styles = [
 	{ name: "CyberPunk", folder: "cyberpunk-style" },
-	{ name: "$999 Monitor Stand", folder: "apfel-style" },
+	{ name: "Lab Dark", folder: "lab-dark-style" },
+	{ name: "Lab", folder: "lab-style" },
 	{ name: "Medieval", folder: "medieval-style" },
 ];
 
