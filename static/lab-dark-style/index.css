@@ -321,7 +321,7 @@ h2 {
 	background: var(--accent);
 }
 .blockButton:active {
-	background: var(--reverse-blue-bg);
+	background: linear-gradient(to top, var(--blue-dark-bg), var(--grad-light));
 	color: var(--reverse-blue-fg);
 }
 .blockButton:active::after {
