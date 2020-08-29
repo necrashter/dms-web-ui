@@ -1,0 +1,179 @@
+{
+    "nodes": [
+        {
+            "latlng": [
+                40.980609,
+                29.053312
+            ],
+            "addr": "Feneryolu Boztepe Sk No:14",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.980577,
+                29.092954
+            ],
+            "addr": "Göztepe Sümer Sk No:1",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.974108,
+                29.041589
+            ],
+            "addr": "Fener Kalamış Cad. No:86 Arkası",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.971248,
+                29.046005
+            ],
+            "addr": "Fenerbahçe Tunaman sok No:10",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.985657,
+                29.069495
+            ],
+            "addr": "İncirli Sk No:1 Karşısı Merdivenköy",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.998543,
+                29.036366
+            ],
+            "addr": "Mustafabey Sk No:14 Acıbadem",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.969592,
+                29.054581
+            ],
+            "addr": "Papatyalı Sk No:6 Cemil Topuzlu Cad",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.997456,
+                29.03443
+            ],
+            "addr": "Sarayardı Cad Ata Sk No:4 Acıbadem",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.997271,
+                29.040365
+            ],
+            "addr": "Hasanpaşa Mukbil Sk No:12 Arkası",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.984152,
+                29.023871
+            ],
+            "addr": "Moda Rızapaşa Sk No:1 Karşısı",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.995875,
+                29.027409
+            ],
+            "addr": "Yel değirmeni Sk No:13 Yanı Rasimpaşa M.",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.984315,
+                29.062225
+            ],
+            "addr": "Ressam Salih Ermez Sk No:7 Yanı",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.988707,
+                29.023936
+            ],
+            "addr": "Kadıköy Güneşlibahçe Sk No:49 Yanı",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.983476,
+                29.066847
+            ],
+            "addr": "Göztepe Ortabahar Sk No:6 Arkası",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.980602,
+                29.05922
+            ],
+            "addr": "Pınar Sk No:7 Yanı Göztepe",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.990594,
+                29.05997
+            ],
+            "addr": "Mandıra Cad No:184 Önü",
+            "pf": 0.5,
+            "status": 0
+        },
+        {
+            "latlng": [
+                40.990773,
+                29.045089
+            ],
+            "addr": "Eğitim Mah 2. Açıkgöz Sk No:21",
+            "pf": 0.5,
+            "status": 0
+        }
+    ],
+    "branches": [
+        {
+            "nodes": [
+                0,
+                14
+            ]
+        },
+        {
+            "nodes": [
+                5,
+                8
+            ]
+        }
+    ],
+    "externalBranches": [],
+    "resources": [],
+    "view": {
+        "lat": 40.98320263357729,
+        "lng": 29.052572250366214
+    },
+    "zoom": 13,
+    "name": "Real Kadikoy"
+}
