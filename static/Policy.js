@@ -170,7 +170,9 @@ function loadPolicy(div, graph, policy, options={}) {
 	options.prelude = d => {
 		let ul = d.append("ul");
 		if(options.prioritized) {
-			ul.append("li").text("Prioritized nodes: " + options.prioritized);
+			ul.append("li").text("Prioritized nodes: ")
+			.append("ul").selectAll("li").data(options.prioritized).join("li")
+				.text((p,i) => "Class "+(i+1)+": "+p.join(" "));
 			ul.append("li").text("Prioritization Algorithm: " + options.algo);
 		} else {
 			ul.append("li").text("No prioritization");
@@ -265,12 +267,17 @@ function selectPrioritizedNode(div, graph){
 		.text(d => "Use "+d.name)
 		.attr("for", d => "algo-"+d.value);
 	// ids of the prioritized node
-	let prioritized = [];
+	let priorities = {};
 	let li;
 	let updateList = () => {
 		li.attr("class", (_, i) => {
-			if(prioritized.includes(i)) return "currentIndex";
+			if(priorities[i] > 0) return "currentIndex";
 			else return "";
+		})
+		.html((_, i) => {
+			let name = "Node #"+i;
+			if(priorities[i] > 0) name = "<b>["+priorities[i]+"]</b> "+name
+			return name;
 		})
 	};
 	let markers = null;
@@ -278,10 +285,10 @@ function selectPrioritizedNode(div, graph){
 	let createMarkers = () => {
 		if(markerLayer) markerLayer.remove();
 		markers = graph.nodes.map((node, i) => {
-			let pri = prioritized.includes(i);
+			let pri = priorities[i];
 			let m = L.marker(node.latlng, {
 				icon: getDescriptionIcon(
-					"#"+i+" "+(pri ? "Prioritized" : "Normal"),
+					"#"+i+" "+(pri > 0 ? "Prioritized <b>["+pri+"]</b>" : "Normal"),
 					pri),
 				pane: "resources",
 			});
@@ -292,11 +299,18 @@ function selectPrioritizedNode(div, graph){
 		markerLayer.addTo(Map);
 	};
 	let selectFun = (_, i) => {
-		if(prioritized.includes(i)) {
-			prioritized.splice(prioritized.indexOf(i),1);
+		if(i in priorities) {
+			let count = Object.values(priorities)
+				.filter(p => p === priorities[i]).length;
+			if(count > 1) {
+				++priorities[i];
+			} else {
+				delete priorities[i];
+			}
 		} else {
-			prioritized.push(i);
+			priorities[i] = 1;
 		}
+		console.log(priorities);
 		updateList();
 		createMarkers();
 	};
@@ -330,6 +344,13 @@ function selectPrioritizedNode(div, graph){
 				return;
 			}
 			cleanUp();
+			let prioritized = [];
+			for(let node in priorities) {
+				let p = priorities[node] - 1;
+				if(!prioritized[p]) prioritized[p] = [];
+				prioritized[p].push(node);
+			}
+			console.log("Prioritized:",prioritized);
 			requestNewPolicy(div, graph, {
 				prioritized: prioritized,
 				algo: algorithms[selectedAlgo].value,
