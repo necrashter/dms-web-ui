@@ -251,7 +251,7 @@ class Graph {
 		// Lat: ${Math.round(10000*event.target._latlng.lat)/10000} <br/>
 		// Lng: ${Math.round(10000*event.target._latlng.lng)/10000}
 		Tooltip.div.innerHTML =
-			`<b>Node #${this.nodes.indexOf(node)}</b> <br/>
+			`<b>Node #${node.index}</b> <br/>
 			  Status: ${status} <br/>
 			P<sub>f</sub>: ${pf ? pf.toFixed(3) : "Unknown"}
 		`;
@@ -274,10 +274,12 @@ class Graph {
 			node: node,
 		});
 		BottomRightPanelContent.innerHTML = `
-			<h1>Node #${this.nodes.indexOf(node)}</h1>
+			<h1>Node #${node.index}</h1>
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
 			<p>Status: ${status}</p>
+			${node.id ? "<p>ID: "+node.id+"</p>" : ""}
+			${node.addr ? "<p>Address: "+node.addr+"</p>" : ""}
 			<p>Probability of Failure: ${pf ? Math.round(10000*pf)/10000 : "Unknown"}</p>
 			<p>Connected to ${node.branches.length} branches.</p>
 			`;
