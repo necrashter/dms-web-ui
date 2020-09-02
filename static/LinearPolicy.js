@@ -1,29 +1,37 @@
 
-/**
- * best case steps for linear
- */
-function getStepsFromPolicy(policy) {
-	let current = 0;
-	let states = [current];
-	while(current < policy.states.length){
-		let actions = policy.transitions[current];
-		let action = actions[policy.policy[current]];
-		let next = action[0][0] - 1;
-		if(next == current) break;
-		let nextState = policy.states[next];
-		if(!nextState) break;
-		states.push(next);
-		current = next;
-		currentState = nextState;
-	}
-	return states;
-}
 
 
 class LinearPolicy extends InteractivePolicy {
 	constructor(_graph, policy) {
 		super(_graph, policy);
-		this.steps = getStepsFromPolicy(policy);
+		this.updateSteps();
+	}
+	/**
+	 * best case steps for linear
+	 */
+	getStepsFromPolicy() {
+		let current = 0;
+		this.steps = [current];
+		this.previousStates = [];
+		while(current < this.states.length){
+			let actions = this.transitions[current];
+			let actionNum = this.policy[current];
+			let action = actions[actionNum];
+			let next = action[0][0] - 1;
+			if(next == current) break;
+			this.previousStates.push({
+				state: current,
+				actionNum: actionNum,
+				next: 0,
+			});
+			let nextState = this.states[next];
+			if(!nextState) break;
+			this.steps.push(next);
+			current = next;
+		}
+	}
+	updateSteps() {
+		this.getStepsFromPolicy();
 		this.goTo(0);
 	}
 	goTo(index) {
@@ -75,6 +83,16 @@ class LinearPolicy extends InteractivePolicy {
 				(nodes.join(", "));
 		}
 	}
+	/**
+	 * This function will return a new policy, and this current policy
+	 * will not be usable.
+	 */
+	convertToInteractive() {
+		this.previousStates = this.previousStates.slice(0, this.index);
+		let out = new InteractivePolicy(this.graph, this, false);
+		out.setState(this.state);
+		return out;
+	}
 }
 
 class LinearPolicyView {
@@ -85,6 +103,7 @@ class LinearPolicyView {
 	constructor(_graph, div, policy, options={}) {
 		this.div = div;
 		this.graph = _graph;
+		this.options = options;
 		Object.assign(this, options);
 		this.setPolicy(policy);
 	}
@@ -176,6 +195,9 @@ class LinearPolicyView {
 				.attr("for", "showNums")
 				.text("Show Numbers on Map");
 		}
+		this.div.append("div").classed("blockButton", true)
+			.text("Convert to Interactive Mode")
+			.on("click", this.convertToInteractive.bind(this));
 		if(this.policy.index == this.policy.steps.length-1) {
 			let endDiv = this.div.append("div");
 			endDiv.append("h2").text("Congratulations!");
@@ -185,6 +207,55 @@ class LinearPolicyView {
 				.transition().duration(500)
 				.style("opacity", 1);
 		}
+	}
+	updateMode() {
+		if(this.markerLayer) this.markerLayer.remove();
+		this.div.html("");
+		this.div.append("h3").text("Updating Graph");
+		let div = this.div.append("div");
+		div.append("p").text("You are updating the graph right now.");
+		div.append("p").text(`
+			When you finish updating, click "Done" button to
+			update the policy.`);
+		div.append("div").classed("blockButton", true)
+			.text("Done")
+			.on("click", () => {
+				div.html("");
+				addSpinnerDiv(div).append("p")
+					.text("Waiting response from server...");
+				requestPolicy(this.graph, this.options).then(response => {
+					let policy = JSON.parse(response);
+					this.policy.update(policy, null);
+					div.html("");
+					div.append("div").classed("blockButton", true)
+						.text("Show best case, discard current state")
+						.on("click", () => {
+							this.policy.updateSteps();
+							this.policyNavigator();
+						});
+					div.append("div").classed("blockButton", true)
+						.text("Switch to interactive mode, keep current state")
+						.on("click", () => {
+							this.convertToInteractive();
+						});
+				}).catch(error => {
+					div.html("");
+					div.selectAll("p").remove();
+					div.append("b").style("color", "red")
+						.text("Failed to get updated policy");
+					div.append("p").style("color", "red")
+						.text(error);
+					div.append("div").classed("blockButton", true)
+						.text("Go back")
+						.on("click", this.updateMode.bind(this));
+				});
+			});
+		div.append("div").classed("blockButton", true)
+			.text("Cancel")
+			.on("click", () => {
+				this.graph.cancelUpdate();
+				this.policyNavigator();
+			});
 	}
 	nodeOnInfo(node, div) {
 		let p = this.policy.energizationProbabilities(node.index);
@@ -198,6 +269,13 @@ class LinearPolicyView {
 	}
 	destroy() {
 		if(this.markerLayer) this.markerLayer.remove();
+	}
+	convertToInteractive() {
+		this.destroy();
+		let newPolicy = this.policy.convertToInteractive();
+		policyView = new InteractivePolicyView(this.graph, this.div, newPolicy,
+			this.options);
+		return policyView;
 	}
 }
 

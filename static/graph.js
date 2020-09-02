@@ -192,7 +192,7 @@ class Graph {
 		g.nodes = this.nodes.map(n => {
 			return {
 				latlng: n.latlng,
-				pf: n.pf ? n.pf : null,
+				pf: n.pf,
 				status: n.status ? n.status : 0
 			};
 		});
@@ -253,7 +253,7 @@ class Graph {
 		Tooltip.div.innerHTML =
 			`<b>Node #${node.index}</b> <br/>
 			  Status: ${status} <br/>
-			P<sub>f</sub>: ${pf ? pf.toFixed(3) : "Unknown"}
+			P<sub>f</sub>: ${pf != null ? pf.toFixed(3) : "Unknown"}
 		`;
 		Tooltip.show(event.originalEvent);
 	}
@@ -289,6 +289,50 @@ class Graph {
 		if(node.externalBranches.length>0) {
 			BottomRightPanelContent.innerHTML += "<p>Connected to a resource.</p>";
 		}
+	}
+	nodeOnUpdate(node) {
+		let pf = node.pf;
+		let status;
+		switch(node.status){
+			case -1: status="Damaged"; break;
+			case 1: status="Energized"; break;
+			default: status="Unknown"; break;
+		}
+		BottomRightPanel.show({
+			node: node,
+		});
+		BottomRightPanelContent.innerHTML = `
+			<h1>Update Node #${node.index}</h1>
+			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
+			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
+			<p>Status: ${status}</p>
+			${node.id ? "<p>ID: "+node.id+"</p>" : ""}
+			${node.addr ? "<p>Address: "+node.addr+"</p>" : ""}
+			<p>Probability of Failure: 
+			${pf == null ? "Unknown" : Math.round(10000*pf)/10000}</p>
+			<p>Connected to ${node.branches.length} branches.</p>
+			`;
+		if(policyView && policyView.nodeOnInfo) {
+			policyView.nodeOnInfo(node, BottomRightPanelContent);
+		}
+		if(node.externalBranches.length>0) {
+			BottomRightPanelContent.innerHTML += "<p>Connected to a resource.</p>";
+		}
+		let div = d3.select(BottomRightPanelContent);
+		div.append("div").classed("blockButton", true)
+			.text("Set probability of failure = 0")
+			.on("click", () => {
+				if(!("originalPf" in node)) node.originalPf = node.pf;
+				node.pf = 0.0;
+				this.nodeOnUpdate(node);
+			});
+		div.append("div").classed("blockButton", true)
+			.text("Set probability of failure = 1")
+			.on("click", () => {
+				if(!("originalPf" in node)) node.originalPf = node.pf;
+				node.pf = 1.0;
+				this.nodeOnUpdate(node);
+			});
 	}
 	nodeOnInfo(event) {
 		let node = event.target.node;
@@ -858,11 +902,17 @@ class Graph {
 	}
 	normalContextMenu(event) {
 		let menu = d3.select("#ContextMenu").html("");
+		if(this.lastHover.hovered && this.lastHover.type == "node") {
+			menu.append("div")
+				.text("Update Bus")
+				.on("click", () => {
+					this.nodeOnUpdate(this.lastHover.data);
+					policyView.updateMode();
+				});
+		}
 		menu.append("div")
-			.text("Switch to Edit Mode")
-			.on("click", () => {
-				this.setMode(1);
-			});
+			.text("Menu")
+			.on("click", onMenuButton);
 	}
 	editContextMenu(event) {
 		let position = [event.latlng.lat, event.latlng.lng];
@@ -948,6 +998,12 @@ class Graph {
 		this.rerender();
 		if(BottomRightPanel.contentInfo && BottomRightPanel.contentInfo.node) {
 			this.showNodeInfo(BottomRightPanel.contentInfo.node);
+		}
+	}
+	cancelUpdate() {
+		BottomRightPanel.hide();
+		for(let node of this.nodes) {
+			if("originalPf" in node) node.pf = node.originalPf;
 		}
 	}
 } //end Graph

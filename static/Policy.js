@@ -28,19 +28,20 @@ class InteractivePolicy {
 	/**
 	 * policy is the direct output from server
 	 */
-	constructor(_graph, policy) {
+	constructor(_graph, policy, initialize=true) {
 		this.graph = graph;
 		for(let key in policy) {
 			this[key] = policy[key];
 		}
-		this.end = false; // if true (No more actions available)
-		this.previousStates = [];
-		this.setState(0);
+		if(initialize) {
+			this.end = false; // if true (No more actions available)
+			this.previousStates = [];
+			this.setState(0);
+		}
 	}
-	setState(state, next = 0) {
-		this.state = state;
-		this.actions = this.transitions[this.state];
-		this.action = this.actions[this.policy[this.state]];
+	setAction(actionNum, next) {
+		this.actionNum = actionNum;
+		this.action = this.actions[actionNum];
 		if(this.action) {
 			this.end = this.action.length == 1 && this.action[0][0]-1 == this.state;
 		} else {
@@ -50,6 +51,17 @@ class InteractivePolicy {
 		if(next === null || this.end)
 			this.graph.setState(this.states[this.state]);
 		else this.setNext(next);
+	}
+	setState(state, next = 0) {
+		this.state = state;
+		this.actions = this.transitions[this.state];
+		let nextAction = this.policy[this.state];
+		this.setAction(nextAction, next);
+	}
+	setStateAndAction(state, action, next = 0) {
+		this.state = state;
+		this.actions = this.transitions[this.state];
+		this.setAction(action, next);
 	}
 	setNext(i) {
 		// represents which transition to take in the current action
@@ -63,7 +75,15 @@ class InteractivePolicy {
 	getNextState() {
 		return this.states[this.action[this.next][0] - 1];
 	}
-	describeAction(action, i) {
+	describeAction(actionNum = null) {
+		if(actionNum == null) actionNum =this.actionNum;
+		let output =  "Action #"+actionNum;
+		if(actionNum == this.policy[this.state]) {
+			output += " (Policy)";
+		}
+		return output;
+	}
+	describeTransition(action, i) {
 		let nextState = this.states[action[0] - 1];
 		let currentState = this.states[this.state];
 		let list = "";
@@ -78,6 +98,7 @@ class InteractivePolicy {
 	nextState() {
 		this.previousStates.push({
 			state: this.state,
+			actionNum: this.actionNum,
 			next: this.next,
 		});
 		this.setState(this.action[this.next][0] - 1);
@@ -85,7 +106,7 @@ class InteractivePolicy {
 	previousState() {
 		let prev = this.previousStates.pop();
 		if(prev === undefined) throw new Error("There's no previous state");
-		this.setState(prev.state, prev.next);
+		this.setStateAndAction(prev.state, prev.actionNum, prev.next);
 	}
 	nextStateAvailable() {
 		return !this.end;
@@ -158,6 +179,10 @@ class InteractivePolicy {
 	energizationProbability(nodeIndex, depth) {
 		return this._energizationProbability(this.state, nodeIndex, depth);
 	}
+	update(policy, next = 0) {
+		Object.assign(this, policy);
+		this.setAction(this.policy[this.state], next);
+	}
 }
 
 function loadPolicy(div, graph, policy, options={}) {
@@ -200,14 +225,20 @@ function loadPolicy(div, graph, policy, options={}) {
 				new LinearPolicy(graph, policy), options);
 		});
 }
-function requestNewPolicy(div, graph, settings={}) {
-	console.log("requesting new policy...");
-	div.html("Waiting response from server...");
+
+function requestPolicy(graph, settings) {
 	let request = {
 		graph: graph.serialize(),
 	};
 	Object.assign(request, settings);
-	Network.post("/policy", JSON.stringify(request)).then(response => {
+	return Network.post("/policy", JSON.stringify(request));
+}
+
+function requestNewPolicy(div, graph, settings={}) {
+	console.log("requesting new policy...");
+	div.html("");
+	addSpinnerDiv(div).append("p").text("Waiting response from server...");
+	requestPolicy(graph, settings).then(response => {
 		let policy = JSON.parse(response);
 		loadPolicy(div, graph, policy, settings);
 	}).catch(error => {
@@ -226,7 +257,8 @@ function requestNewPolicy(div, graph, settings={}) {
  * otherwise requests new policy
  */
 function getPolicy(div, graph) {
-	div.html("Please Wait...");
+	div.html("");
+	addSpinnerDiv(div).append("p").text("Please wait...");
 	if(graph.solutionFile && !graph.dirty) {
 		// force get new version
 		let url = graph.solutionFile + "?time="+ Date.now();
@@ -426,6 +458,7 @@ class InteractivePolicyView {
 		this.div = div;
 		this.graph = _graph;
 		this.policy = policy;
+		this.options = options;
 		Object.assign(this, options);
 		this.policyNavigator();
 	}
@@ -476,7 +509,31 @@ class InteractivePolicyView {
 		} else {
 			prev.classed("disabled", true);
 		}
+
 		if(this.policy.nextStateAvailable()) {
+			// select box for action
+			var innerDiv;
+			const wrapperDiv = this.div.append("div")
+				.style("margin", "1em")
+				.attr("class","CustomSelect");
+			wrapperDiv.append("div")
+				.attr("class", "CustomSelectHead")
+				.text(this.policy.describeAction())
+				.on("click", function(_) {
+					innerDiv.classList.toggle("open");
+				}).node();
+			const ul = wrapperDiv.append("div").attr("class", "CustomSelectList").append("div");
+			innerDiv = ul.node();
+
+			ul.selectAll("div")
+				.data(Object.keys(this.policy.actions)).join("div")
+				.attr("class", "CustomSelectElement")
+				.text((i) => this.policy.describeAction(i))
+				.on("click", (i) => {
+					this.policy.setAction(i, 0);
+					this.policyNavigator();
+				});
+
 			next.on("click", () => {
 				this.policy.nextState();
 				this.policyNavigator(); // refresh
@@ -493,7 +550,7 @@ class InteractivePolicyView {
 			}
 			let li = transitionList.selectAll("div")
 				.data(this.policy.action).join("div")
-				.html(this.policy.describeAction.bind(this.policy))
+				.html(this.policy.describeTransition.bind(this.policy))
 				.on("click", (_, i) => {
 					this.setNext(i);
 					updateLi(li);
@@ -509,6 +566,44 @@ class InteractivePolicyView {
 			this.div.append("p")
 				.text("No more actions are available.");
 		}
+	}
+	updateMode() {
+		if(this.markerLayer) this.markerLayer.remove();
+		this.div.html("");
+		this.div.append("h3").text("Updating Graph");
+		let div = this.div.append("div");
+		div.append("p").text("You are updating the graph right now.");
+		div.append("p").text(`
+			When you finish updating, click "Done" button to
+			update the policy.`);
+		div.append("div").classed("blockButton", true)
+			.text("Done")
+			.on("click", () => {
+				div.html("");
+				addSpinnerDiv(div).append("p")
+					.text("Waiting response from server...");
+				requestPolicy(this.graph, this.options).then(response => {
+					let policy = JSON.parse(response);
+					this.policy.update(policy);
+					this.policyNavigator();
+				}).catch(error => {
+					div.html("");
+					div.selectAll("p").remove();
+					div.append("b").style("color", "red")
+						.text("Failed to get updated policy");
+					div.append("p").style("color", "red")
+						.text(error);
+					div.append("div").classed("blockButton", true)
+						.text("Go back")
+						.on("click", this.updateMode.bind(this));
+				});
+			});
+		div.append("div").classed("blockButton", true)
+			.text("Cancel")
+			.on("click", () => {
+				this.graph.cancelUpdate();
+				this.policyNavigator();
+			});
 	}
 	nodeOnInfo(node, div) {
 		if(this.policy.isEnergized(node)) return;

@@ -60,7 +60,7 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 		.attr("class", "CustomSelectHead")
 		.style("width", "12em")
 		.text(selectedBaseMap)
-		.on("click", function(arg) {
+		.on("click", function(_) {
 			innerDiv.classList.toggle("open");
 		}).node();
 	const ul = wrapperDiv.append("div").attr("class", "CustomSelectList").append("div");

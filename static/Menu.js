@@ -146,7 +146,7 @@ function d3testMenu() {
 	Overlay.classList.remove("hidden");
 }
 
-MenuButton.addEventListener("click", function() {
+function onMenuButton() {
 	Overlay.innerHTML = `
 		<div id="OverlayContent"></div>
 		<div id="OverlayLeftBar">
@@ -161,7 +161,9 @@ MenuButton.addEventListener("click", function() {
 	statsButton();
 	Overlay.classList.remove("hidden");
 	PanelContainer.classList.add("disabled");
-});
+}
+
+MenuButton.addEventListener("click", onMenuButton);
 
 
 function showModalOverlay(content, options={}) {

@@ -13,6 +13,7 @@ function changeStyle(folderName) {
 	document.getElementById("graph-css").href = folderName+"/graph.css";
 	document.getElementById("custom-select-css").href= folderName+"/CustomSelect.css";
 	document.getElementById("custom-checkbox-css").href = folderName+"/CustomCheckbox.css";
+	// document.getElementById("spinner-css").href = folderName+"/Spinner.css";
 }
 
 
@@ -77,4 +78,10 @@ function createCheckbox(target, label, onChange) {
 		.attr("for", id)
 		.text(label);
 	return div;
+}
+
+function addSpinnerDiv(div) {
+	let out = div.append("div").classed("spinnerWrapper", true);
+	out.append("div").classed("spinner", true);
+	return out;
 }
