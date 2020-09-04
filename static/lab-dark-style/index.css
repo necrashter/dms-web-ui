@@ -600,3 +600,7 @@ input[type="text"] {
 	flex-wrap: nowrap;
 }
 
+.rightFlexFloat {
+	flex-grow: 1;
+	text-align: right;
+}

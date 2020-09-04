@@ -12,14 +12,14 @@ class LinearPolicy extends InteractivePolicy {
 	getStepsFromPolicy() {
 		let current = 0;
 		this.steps = [current];
-		this.previousStates = [];
-		while(current < this.states.length){
+		this.fullHistory = [];
+		while(current < this.states.length) {
 			let actions = this.transitions[current];
 			let actionNum = this.policy[current];
 			let action = actions[actionNum];
 			let next = action[0][0] - 1;
 			if(next == current) break;
-			this.previousStates.push({
+			this.fullHistory.push({
 				state: current,
 				actionNum: actionNum,
 				next: 0,
@@ -29,6 +29,8 @@ class LinearPolicy extends InteractivePolicy {
 			this.steps.push(next);
 			current = next;
 		}
+		this.steps.push(current);
+		this.fullHistory.push(this.fullHistory[this.fullHistory.length-1]);
 	}
 	updateSteps() {
 		this.getStepsFromPolicy();
@@ -36,7 +38,13 @@ class LinearPolicy extends InteractivePolicy {
 	}
 	goTo(index) {
 		this.index = index;
-		this.setState(this.steps[this.index], null); //no next
+		if(this.index == 0) {
+			this.previousStates = [];
+			this.setState(this.steps[0], null);
+		} else {
+			this.previousStates = this.fullHistory.slice(0, this.index-1);
+			this.setState(this.steps[this.index-1]);
+		}
 	}
 	getActivationList() {
 		let lastStep = this.states[this.steps[0]];
@@ -70,8 +78,13 @@ class LinearPolicy extends InteractivePolicy {
 		}
 		return p;
 	}
+	currentSuccessProbability() {
+		if(this.index == 0 || this.index == this.steps.length-1) return null;
+		return this.action[0][1];
+	}
 	getName(d, i) {
 		if(i == 0) return "Initial Status";
+		else if(i == this.steps.length-1) return "Final Status";
 		else {
 			let old = this.states[this.steps[i-1]];
 			d = this.states[d];
@@ -88,7 +101,6 @@ class LinearPolicy extends InteractivePolicy {
 	 * will not be usable.
 	 */
 	convertToInteractive() {
-		this.previousStates = this.previousStates.slice(0, this.index);
 		let out = new InteractivePolicy(this.graph, this, false);
 		out.setState(this.state);
 		return out;
@@ -157,13 +169,18 @@ class LinearPolicyView {
 		} else {
 			prev.classed("disabled", true);
 		}
+		let p = this.policy.currentSuccessProbability();
+		if(p != null) {
+			this.div.append("p").text("Success probability of this step: "+
+				p.toFixed(3));
+		}
 		if(this.policy.index < this.policy.steps.length -1) {
 			next.on("click", () => {
 				this.goToPolicyStep(this.policy.index+1);
 			});
-			let p = this.policy.successProbability(this.policy.index+1);
-			this.div.append("p").text("Success Probability for next step: "+
-				p.toFixed(3));
+			// let p = this.policy.successProbability(this.policy.index+1);
+			// this.div.append("p").text("Success Probability for next step: "+
+			// 	p.toFixed(3));
 		} else {
 			next.classed("disabled", true);
 		}

@@ -48,8 +48,12 @@ class InteractivePolicy {
 			this.end = true;
 		}
 		// set graph to the next state
-		if(next === null || this.end)
-			this.graph.setState(this.states[this.state]);
+		if(next === null || this.end) {
+			let hist = this.previousStates.map(s => this.states[s.state]);
+			hist.push(this.states[this.state]);
+			if(this.end) hist.push(this.states[this.state]);
+			this.graph.setState(hist);
+		}
 		else this.setNext(next);
 	}
 	setState(state, next = 0) {
@@ -67,7 +71,10 @@ class InteractivePolicy {
 		// represents which transition to take in the current action
 		this.next = i;
 		let nextState = this.states[this.action[this.next][0] - 1];
-		this.graph.setState(nextState);
+		let hist = this.previousStates.map(s => this.states[s.state]);
+		hist.push(this.states[this.state]);
+		hist.push(nextState);
+		this.graph.setState(hist);
 	}
 	getCurrentState() {
 		return this.states[this.state];
@@ -93,7 +100,10 @@ class InteractivePolicy {
 			}
 		}
 		//return `<div><b>Transition #${i}</b> <br/>`+this.states[action[0] - 1].toString()+"</div>";
-		return `<div><b>Transition #${i}</b> <div>${list}</div> </div>`;
+		return `
+			<div><b>Transition #${i}</b> <div>${list}</div> </div>
+			<div class="rightFlexFloat">P = ${action[1].toFixed(3)}</div>
+			`;
 	}
 	nextState() {
 		this.previousStates.push({
@@ -186,10 +196,7 @@ class InteractivePolicy {
 }
 
 function loadPolicy(div, graph, policy, options={}) {
-	// First make every bus "Unknown"
-	graph.nodes.forEach(node => {
-		node.status = 0;
-	});
+	graph.emptyState();
 	graph.rerender();
 
 	options.prelude = d => {

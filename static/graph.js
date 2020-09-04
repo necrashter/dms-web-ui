@@ -1,13 +1,19 @@
 
 var saveCount = 0;
 /* constants related to rendering graph */
-const energizedColor = "#0000FF";
+const actionColor = "#0000FF";
+const energizedColor = "#24B700";
 const unenergizedColor = "#c70039";
 const lineWeight = 6;
 const hoveredLineWeight = 8;
-const nodeRadius = 6;
+const nodeRadius = 9;
+const nodeWeight = 2;
 
 const shadowColor = "#574f7d";
+const riskyColor = "#FDDC01";
+
+const riskThreshold = 0.8;
+const blinkTime = 500;
 
 const antPathDashArray = [2, 40];
 const antPathDelay = 700;
@@ -40,11 +46,11 @@ Icons.crosshair = L.icon({
 
 // graph helper functions
 
-function createEnergizedAntPath(route) {
+function createEnergizedAntPath(route, nodeStatus=1) {
 	return L.polyline.antPath(route, {
 		delay: antPathDelay,
 		dashArray: antPathDashArray,
-		color: energizedColor,
+		color: nodeStatus == 2 ? actionColor : energizedColor,
 		pulseColor: "#FFFFFF",
 		weight: lineWeight,
 		smoothFactor: 1,
@@ -55,22 +61,22 @@ function createEnergizedAntPath(route) {
 	});
 }
 
-function createEnergizedArrow(route) {
+function createEnergizedArrow(route, nodeStatus=1) {
 	return L.polyline(route, {
-		color: energizedColor,
+		color: nodeStatus == 2 ? actionColor : energizedColor,
 		weight: lineWeight,
 		smoothFactor: 1,
 		pane: "nodes"
 	});
 }
 
-function createArrowDecorator(line, energized) {
+function createArrowDecorator(line, nodeStatus=1) {
 	return L.polylineDecorator( line, {
 		patterns: [
 			//{offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 15, polygon: false, pathOptions: {stroke: true}})}
 			{offset: '50%', repeat: 0, symbol: L.Symbol.arrowHead({
 				pixelSize: 25, pathOptions: {
-					color: energized ? energizedColor : shadowColor,
+					color: nodeStatus == 2 ? actionColor : energizedColor,
 					fillOpacity: 1, weight: 0
 				},
 			})}
@@ -519,6 +525,8 @@ class Graph {
 			// holds the branch elements that connect to DERs
 			node.externalBranches = [];
 		});
+		this.riskyNodes = [];
+		if(this.blinkTimer) clearTimeout(this.blinkTimer);
 		var markers = [];
 		var circles = [];
 		var branches = [];
@@ -526,6 +534,11 @@ class Graph {
 		var resourceMarkers = [];
 		var decorators = [];
 		const branchMode = this.mode == 0 ? "branches" : "nodes";
+		let pfInterpolator;
+		if(Settings.colorizedPfs) 
+			pfInterpolator = d3.interpolateRgb(shadowColor, riskyColor);
+		else
+			pfInterpolator = (_) => shadowColor;
 
 		// add branches
 		for(var i = 0; i<this.branches.length; ++i) {
@@ -537,9 +550,9 @@ class Graph {
 				//	this.nodes[branch.nodes[1]].status > 0;
 			if (energized) {
 				if(this.mode == 0 && Settings.animateAnts) {
-					line = createEnergizedAntPath(route);
+					line = createEnergizedAntPath(route, energized);
 				} else {
-					line = createEnergizedArrow(route);
+					line = createEnergizedArrow(route, energized);
 				}
 			} else {
 				line = L.polyline(route, {
@@ -549,7 +562,7 @@ class Graph {
 					pane: branchMode
 				});
 			}
-			if(Settings.arrows) {
+			if(Settings.arrows && energized) {
 				decorators.push(createArrowDecorator(line, energized));
 			}
 			line.branch = branch;
@@ -585,17 +598,28 @@ class Graph {
 		for(var i = 0; i<this.nodes.length; ++i) {
 			let node = this.nodes[i];
 			let latlng = node.latlng;
-			let color = (node.status>0) ? energizedColor :
-				(node.status<0) ? unenergizedColor : shadowColor;
+			let color;
+			if(node.status>0) {
+				color = (node.status == 2) ? actionColor : energizedColor;
+			} else if(node.status<0) {
+				color = unenergizedColor;
+			} else {
+				color = pfInterpolator(node.pf);
+			}
 
 			//markers.push(L.marker(latlng, {icon: testIcon}));
 			let circle = L.circleMarker(latlng, {
-				color: color,
+				color: shadowColor,
 				fillColor: color,
 				fillOpacity: 1.0,
 				radius: nodeRadius,
+				weight: nodeWeight,
 				pane: "nodes"
 			});
+			if(node.status == 0 && node.pf > riskThreshold) {
+				circle.originalColor = color;
+				this.riskyNodes.push(circle);
+			}
 			circle.node = node;
 			circle.on("mouseover", this.nodeOnMouseOver.bind(this));
 			circle.on("mouseout", this.nodeOnMouseOut.bind(this));
@@ -629,6 +653,27 @@ class Graph {
 		this.externalBranchLayer.addTo(map);
 		this.circleLayer.addTo(map);
 		this.resourceLayer.addTo(map);
+		this.blinkTimer = setTimeout(() => this.onBlink(), blinkTime);
+	}
+	onBlink(even=true) {
+		try {
+			if(even) {
+				for(let circle of this.riskyNodes)
+					circle.setStyle({
+						// color: unenergizedColor,
+						fillColor: unenergizedColor,
+					});
+			} else {
+				for(let circle of this.riskyNodes)
+					circle.setStyle({
+						// color: circle.originalColor,
+						fillColor: circle.originalColor,
+					});
+			}
+			this.blinkTimer = setTimeout(() => this.onBlink(!even), blinkTime);
+		} catch(e) {
+			console.error("onBlink failed ", e);
+		}
 	}
 	/**
 	 * Generates a random system with len nodes.
@@ -956,19 +1001,26 @@ class Graph {
 				this.setMode(0);
 			});
 	}
-	setState(state) {
+	_setState(state) {
 		if(state.length !== this.nodes.length) {
 			throw new Error("State length is not equal to nodes.length "
 				+this.nodes.length);
 		}
 		for(let i=0; i<state.length; ++i) {
-			let status = state[i];
-			this.nodes[i].status = status === "D" ? -1 :
-				status === "U" ? 0 : 1;
+			switch(state[i]) {
+				case "D":
+					this.nodes[i].status = -1;
+					break;
+				case "U":
+					this.nodes[i].status = 0;
+					break;
+				default:
+					if(this.nodes[i].status > 0)
+						this.nodes[i].status = 1;
+					else
+						this.nodes[i].status = 2;
+			}
 		}
-		this.branches.forEach(branch => branch.energized = false);
-		// TODO: this is not "deterministic"
-		// Setting directions
 		for(let externalBranch of this.externalBranches) {
 			let nodes = [externalBranch.node];
 			let oldNodes = new Set(); // constant time lookup
@@ -981,19 +1033,31 @@ class Graph {
 						if(state[b.branch.nodes[1]] == state[node]) {
 							if(state[node] != "D" && state[node] != "U" &&
 								!nodes.includes(b.branch.nodes[1]))
-								b.branch.energized = true;
+								b.branch.energized = b.branch.energized > 0 ? 1 : 2;
 							nodes.unshift(b.branch.nodes[1]);
 						}
 					} else if(state[b.branch.nodes[0]] == state[node]) {
 						if(state[node] != "D" && state[node] != "U" &&
 							!nodes.includes(b.branch.nodes[0]))
-							b.branch.energized = true;
+							b.branch.energized = b.branch.energized > 0 ? 1 : 2;
 						nodes.unshift(b.branch.nodes[0]);
 						b.branch.nodes.reverse();
 					}
 				}
 				oldNodes.add(node);
 			}
+		}
+	}
+	emptyState() {
+		for(let node of this.nodes) {
+			node.status = 0;
+		}
+		this.branches.forEach(branch => branch.energized = 0);
+	}
+	setState(hist) {
+		this.emptyState();
+		for(let s of hist) {
+			this._setState(s);
 		}
 		this.rerender();
 		if(BottomRightPanel.contentInfo && BottomRightPanel.contentInfo.node) {

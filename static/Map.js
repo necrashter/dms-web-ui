@@ -1,6 +1,7 @@
 var Settings = {
 	animateAnts: true,
 	arrows: false,
+	colorizedPfs: true,
 }
 
 const Map = L.map('map', {
@@ -78,34 +79,49 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 
 	TopRightPanel.appendChild(wrapperDiv.node());
 
+	// {
+	// 	let div = d3.create("div").classed("customCheckbox", true);
+	// 	let checkbox = div.append("input")
+	// 		.attr("id", "marchingAnts")
+	// 		.attr("type", "checkbox")
+	// 		.on("change", () => {
+	// 			Settings.animateAnts = checkbox.node().checked;
+	// 			if(graph) graph.rerender();
+	// 		});
+	// 	checkbox.node().checked = Settings.animateAnts;
+	// 	div.append("label")
+	// 		.attr("for", "marchingAnts")
+	// 		.text("Marching Ants");
+	// 	TopRightPanel.appendChild(div.node());
+	// }
+	// {
+	// 	let div = d3.create("div").classed("customCheckbox", true);
+	// 	let checkbox = div.append("input")
+	// 		.attr("id", "arrows")
+	// 		.attr("type", "checkbox")
+	// 		.on("change", () => {
+	// 			Settings.arrows = checkbox.node().checked;
+	// 			if(graph) graph.rerender();
+	// 		});
+	// 	div.append("label")
+	// 		.attr("for", "arrows")
+	// 		.text("Arrows");
+	// 	checkbox.node().checked = Settings.arrows;
+	// 	TopRightPanel.appendChild(div.node());
+	// }
 	{
 		let div = d3.create("div").classed("customCheckbox", true);
 		let checkbox = div.append("input")
-			.attr("id", "marchingAnts")
+			.attr("id", "colorizedPfs")
 			.attr("type", "checkbox")
 			.on("change", () => {
-				Settings.animateAnts = checkbox.node().checked;
+				Settings.colorizedPfs = checkbox.node().checked;
 				if(graph) graph.rerender();
 			});
-		checkbox.node().checked = Settings.animateAnts;
+		checkbox.node().checked = Settings.colorizedPfs;
 		div.append("label")
-			.attr("for", "marchingAnts")
-			.text("Marching Ants");
-		TopRightPanel.appendChild(div.node());
-	}
-	{
-		let div = d3.create("div").classed("customCheckbox", true);
-		let checkbox = div.append("input")
-			.attr("id", "arrows")
-			.attr("type", "checkbox")
-			.on("change", () => {
-				Settings.arrows = checkbox.node().checked;
-				if(graph) graph.rerender();
-			});
-		div.append("label")
-			.attr("for", "arrows")
-			.text("Arrows");
-		checkbox.node().checked = Settings.arrows;
+			.attr("for", "colorizedPfs")
+			.html("Colorize by P<sub>f</sub>");
 		TopRightPanel.appendChild(div.node());
 	}
 })();
