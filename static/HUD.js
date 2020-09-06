@@ -25,6 +25,7 @@ BottomRightPanel.show = function(info=null) {
 BottomRightPanel.hide = function() {
 	BottomRightPanel.contentInfo = null;
 	BottomRightPanel.classList.add("hidden");
+	if(graph) graph.onPanelHide();
 }
 
 function createTextInput(target, name, value) {

@@ -178,3 +178,44 @@ Map.on('zoomend', (event) => {
 });
 */
 
+
+var CustomLeafletStyle = document.createElement("style");
+CustomLeafletStyle.type = "text/css";
+document.head.appendChild(CustomLeafletStyle);
+
+const MapThemes = {
+	"Default": {
+		colors: {
+			action: "#0000FF",
+				energized: "#24B700",
+				damaged: "#c70039",
+				shadow: "#574f7d",
+				risky: "#FDDC01",
+		},
+		css: ""
+	},
+	"Dark": {
+		colors: {
+			action: "#0000FF",
+			energized: "#30FF30",
+			damaged: "#FF0000",
+			shadow: "#bac2cc",
+			risky: "#FFFF00",
+		},
+		css: `
+			.leaflet-tile {
+				filter: invert();
+			}
+		`
+	}
+};
+
+function setMapTheme(name) {
+	let theme = MapThemes[name];
+	if(theme) {
+		Colors = theme.colors;
+		CustomLeafletStyle.innerText = theme.css;
+	} else {
+		throw new Error("Theme not found with name: "+name);
+	}
+}

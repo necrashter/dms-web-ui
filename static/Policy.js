@@ -123,6 +123,30 @@ class InteractivePolicy {
 	}
 
 	/**
+	 * Calculates the energization probability of all nodes
+	 * recursive solution
+	 */
+	_allEnergizationProb(state) {
+		let vec = this.states[state].map(s => {
+			if(s === "D") return 0;
+			if(s !== "U") return 1;
+			return null;
+		});
+		let actions = this.transitions[state];
+		let action = actions[this.policy[state]];
+		if(!action) return vec.map(s => s==null ? 0 : s);
+		if(action.length == 1 && action[0][0]-1 == state)
+			return vec.map(s => s==null ? 0 : s);
+		return action.map(a => {
+			if(a[0]-1 == state) vec.map(() => 0);
+			let mul = vec.map(s => s==null ? a[1] : a[1]*s);
+			return this._allEnergizationProb(a[0]-1).map((p,i) => p * mul[i]);
+		}).reduce((a,b) => a.map((n,i) => n+b[i]), vec.map(() => 0));
+	}
+	allEnergizationProb() {
+		return this._allEnergizationProb(this.state);
+	}
+	/**
 	 * Calculates the energization probability of the node at nodeIndex
 	 * in "depth" number of steps
 	 * recursive solution
@@ -181,6 +205,7 @@ class InteractivePolicy {
 	}
 	isEnergized(nodeIndex) {
 		let status = this.states[this.state][nodeIndex];
+		console.log(status);
 		return status != "D" && status != "U";
 	}
 	energizationProbabilities(nodeIndex) {
@@ -196,9 +221,6 @@ class InteractivePolicy {
 }
 
 function loadPolicy(div, graph, policy, options={}) {
-	graph.emptyState();
-	graph.rerender();
-
 	options.prelude = d => {
 		let ul = d.append("ul");
 		if(options.prioritized) {
@@ -428,6 +450,9 @@ function selectPolicyOptions(div, graph){
 }
 
 function selectPolicyView(div, graph) {
+	graph.emptyState();
+	graph.rerender();
+
 	function createTrivialPolicy() {
 		//this.infoText = "A trivial policy has been generated.";
 		let policy = trivialPolicy(graph);
@@ -613,11 +638,11 @@ class InteractivePolicyView {
 			});
 	}
 	nodeOnInfo(node, div) {
-		if(this.policy.isEnergized(node)) return;
-		div = d3.select(div);
+		if(node.status > 0) return;
 		let p = this.policy.energizationProbabilities(node.index);
 		let index = p.lastIndexOf(0);
 		p = p.slice(index, p.indexOf(p[p.length-1])+1);
+		div = d3.select(div);
 		div.append("div").text("Probability of energization in...");
 		div.append("ul").selectAll("li").data(p).join("li")
 			.text((d,i) => `${i==p.length-1 ? (index+i)+"+" : i+index} steps: `+(Math.round(10000*d)/10000));

@@ -1,16 +1,20 @@
 
 var saveCount = 0;
 /* constants related to rendering graph */
-const actionColor = "#0000FF";
-const energizedColor = "#24B700";
-const unenergizedColor = "#c70039";
+
+var Colors = {
+	action: "#0000FF",
+	energized: "#24B700",
+	damaged: "#c70039",
+	shadow: "#574f7d",
+	risky: "#FDDC01",
+}
+
 const lineWeight = 6;
 const hoveredLineWeight = 8;
 const nodeRadius = 9;
 const nodeWeight = 2;
 
-const shadowColor = "#574f7d";
-const riskyColor = "#FDDC01";
 
 const riskThreshold = 0.8;
 const blinkTime = 500;
@@ -50,7 +54,7 @@ function createEnergizedAntPath(route, nodeStatus=1) {
 	return L.polyline.antPath(route, {
 		delay: antPathDelay,
 		dashArray: antPathDashArray,
-		color: nodeStatus == 2 ? actionColor : energizedColor,
+		color: nodeStatus == 2 ? Colors.action : Colors.energized,
 		pulseColor: "#FFFFFF",
 		weight: lineWeight,
 		smoothFactor: 1,
@@ -63,7 +67,7 @@ function createEnergizedAntPath(route, nodeStatus=1) {
 
 function createEnergizedArrow(route, nodeStatus=1) {
 	return L.polyline(route, {
-		color: nodeStatus == 2 ? actionColor : energizedColor,
+		color: nodeStatus == 2 ? Colors.action : Colors.energized,
 		weight: lineWeight,
 		smoothFactor: 1,
 		pane: "nodes"
@@ -76,7 +80,7 @@ function createArrowDecorator(line, nodeStatus=1) {
 			//{offset: '100%', repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: 15, polygon: false, pathOptions: {stroke: true}})}
 			{offset: '50%', repeat: 0, symbol: L.Symbol.arrowHead({
 				pixelSize: 25, pathOptions: {
-					color: nodeStatus == 2 ? actionColor : energizedColor,
+					color: nodeStatus == 2 ? Colors.action : Colors.energized,
 					fillOpacity: 1, weight: 0
 				},
 			})}
@@ -94,6 +98,7 @@ class Graph {
 		 */
 		this.mode = 0;
 		this.lastHover = { type: null, data: null, hovered: false };
+		this.lastEdit = { type: null, data: null, active: false };
 		/**
 		 * Contains objects of form 
 		 * { latlng = [lat, lng] }
@@ -199,6 +204,7 @@ class Graph {
 			return {
 				latlng: n.latlng,
 				pf: n.pf,
+				name: n.name,
 				status: n.status ? n.status : 0
 			};
 		});
@@ -237,7 +243,7 @@ class Graph {
 		} else {
 			this.nodeOnClick = this.nodeOnEdit;
 			this.branchOnClick = this.branchOnEdit;
-			this.resourceOnClick = this.branchOnEdit;
+			this.resourceOnClick = this.resourceOnEdit;
 		}
 	}
 	nodeOnMouseOver (event) {
@@ -257,7 +263,7 @@ class Graph {
 		// Lat: ${Math.round(10000*event.target._latlng.lat)/10000} <br/>
 		// Lng: ${Math.round(10000*event.target._latlng.lng)/10000}
 		Tooltip.div.innerHTML =
-			`<b>Node #${node.index}</b> <br/>
+			`<b>${node.name ? node.name : "Node #"+node.index}</b> <br/>
 			  Status: ${status} <br/>
 			P<sub>f</sub>: ${pf != null ? pf.toFixed(3) : "Unknown"}
 		`;
@@ -280,7 +286,7 @@ class Graph {
 			node: node,
 		});
 		BottomRightPanelContent.innerHTML = `
-			<h1>Node #${node.index}</h1>
+			<h1>${node.name ? node.name : "Node #"+node.index}</h1>
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
 			<p>Status: ${status}</p>
@@ -308,7 +314,7 @@ class Graph {
 			node: node,
 		});
 		BottomRightPanelContent.innerHTML = `
-			<h1>Update Node #${node.index}</h1>
+			<h1>${node.name ? node.name : "Node #"+node.index}</h1>
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
 			<p>Status: ${status}</p>
@@ -346,12 +352,16 @@ class Graph {
 	}
 	nodeOnEdit(event) {
 		let node = event.target.node;
+		this.lastEdit.type = "node";
+		this.lastEdit.data = node;
+		this.lastEdit.active = true;
 		BottomRightPanel.show();
 		BottomRightPanelContent.innerHTML = `
 			<h1>Node #${this.nodes.indexOf(node)}</h1>
 			<p>Connected to ${node.branches.length} branches.</p>
 			`;
 		let controls = d3.create("div");
+		let nameInput = createTextInput(controls, "Name", node.name);
 		let latInput = createTextInput(controls, "Lat", node.latlng[0]);
 		let lngInput = createTextInput(controls, "Lng", node.latlng[1]);
 		let status = createSelectBox(controls,[
@@ -380,6 +390,9 @@ class Graph {
 					node.pf = Math.min(1.0, Math.max(0.0, pf));
 					pfInput.property("value", node.pf);
 				}
+				let newName = nameInput.property("value");
+				if(newName.length > 0) node.name = newName;
+				else delete node.name;
 				node.status = status.value;
 				this.rerender();
 			});
@@ -412,6 +425,9 @@ class Graph {
 	}
 	resourceOnEdit(event) {
 		let resource = event.target.data;
+		this.lastEdit.type = "resource";
+		this.lastEdit.data = resource;
+		this.lastEdit.active = true;
 		BottomRightPanel.show();
 		BottomRightPanelContent.innerHTML = `
 			<h1>Resource #${this.resources.indexOf(resource)}</h1>
@@ -536,9 +552,9 @@ class Graph {
 		const branchMode = this.mode == 0 ? "branches" : "nodes";
 		let pfInterpolator;
 		if(Settings.colorizedPfs) 
-			pfInterpolator = d3.interpolateRgb(shadowColor, riskyColor);
+			pfInterpolator = d3.interpolateRgb(Colors.shadow, Colors.risky);
 		else
-			pfInterpolator = (_) => shadowColor;
+			pfInterpolator = (_) => Colors.shadow;
 
 		// add branches
 		for(var i = 0; i<this.branches.length; ++i) {
@@ -556,7 +572,7 @@ class Graph {
 				}
 			} else {
 				line = L.polyline(route, {
-					color: shadowColor,
+					color: Colors.shadow,
 					weight: lineWeight,
 					smoothFactor: 1,
 					pane: branchMode
@@ -576,8 +592,8 @@ class Graph {
 		// add external branches
 		for(var i = 0; i<this.externalBranches.length; ++i) {
 			let branch = this.externalBranches[i];
-			let lineColor = (branch.status>0) ? energizedColor :
-				(branch.status===0) ? shadowColor : unenergizedColor;
+			let lineColor = (branch.status>0) ? Colors.energized :
+				(branch.status===0) ? Colors.shadow : Colors.damaged;
 			let line = L.polyline( [ //coordinates
 				this.resources[branch.source].latlng,
 				this.nodes[branch.node].latlng
@@ -600,16 +616,16 @@ class Graph {
 			let latlng = node.latlng;
 			let color;
 			if(node.status>0) {
-				color = (node.status == 2) ? actionColor : energizedColor;
+				color = (node.status == 2) ? Colors.action : Colors.energized;
 			} else if(node.status<0) {
-				color = unenergizedColor;
+				color = Colors.damaged;
 			} else {
 				color = pfInterpolator(node.pf);
 			}
 
 			//markers.push(L.marker(latlng, {icon: testIcon}));
 			let circle = L.circleMarker(latlng, {
-				color: shadowColor,
+				color: Colors.shadow,
 				fillColor: color,
 				fillOpacity: 1.0,
 				radius: nodeRadius,
@@ -660,8 +676,8 @@ class Graph {
 			if(even) {
 				for(let circle of this.riskyNodes)
 					circle.setStyle({
-						// color: unenergizedColor,
-						fillColor: unenergizedColor,
+						// color: Colors.damaged,
+						fillColor: Colors.damaged,
 					});
 			} else {
 				for(let circle of this.riskyNodes)
@@ -970,6 +986,17 @@ class Graph {
 						this.rerender();
 				});
 		} else {
+			if(this.lastEdit.active && 
+				(this.lastEdit.type == "node" || 
+					this.lastEdit.type == "resource"))
+			{
+				menu.append("div")
+					.text("Move Here")
+					.on("click", () => {
+						this.lastEdit.data.latlng = position;
+						this.rerender();
+					});
+			}
 			menu.append("div")
 				.text("Add Node")
 				.on("click", () => {
@@ -1069,6 +1096,9 @@ class Graph {
 		for(let node of this.nodes) {
 			if("originalPf" in node) node.pf = node.originalPf;
 		}
+	}
+	onPanelHide() {
+		this.lastEdit.active = false;
 	}
 } //end Graph
 

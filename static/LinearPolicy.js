@@ -275,6 +275,7 @@ class LinearPolicyView {
 			});
 	}
 	nodeOnInfo(node, div) {
+		if(node.status > 0) return;
 		let p = this.policy.energizationProbabilities(node.index);
 		let index = p.lastIndexOf(0);
 		if(index < 0) return;
