@@ -146,6 +146,9 @@ class InteractivePolicy {
 	allEnergizationProb() {
 		return this._allEnergizationProb(this.state);
 	}
+	cumulativePfs() {
+		return this.allEnergizationProb().map(a => 1-a);
+	}
 	/**
 	 * Calculates the energization probability of the node at nodeIndex
 	 * in "depth" number of steps

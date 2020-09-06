@@ -65,6 +65,33 @@ function createSelectBox(target, data, name, value) {
 	return info;
 }
 
+function createCustomSelectBox(div, data, currentIndex=0, zIndex=1) {
+	let current = data[currentIndex];
+	var innerDiv;
+	const wrapperDiv = div.append("div")
+		.attr("class","CustomSelect")
+		.style("flex-grow", 1)
+		.style("z-index", zIndex);
+	var headDiv = wrapperDiv.append("div")
+		.attr("class", "CustomSelectHead")
+		.html(current.name)
+		.on("click", function() {
+			innerDiv.classList.toggle("open");
+		}).node();
+	const ul = wrapperDiv.append("div").attr("class", "CustomSelectList")
+		.append("div");
+	innerDiv = ul.node();
+
+	ul.selectAll("div").data(data).join("div")
+		.attr("class", "CustomSelectElement")
+		.html(d => d.name)
+		.on("click", d => {
+			d.func();
+			headDiv.innerHTML=d.name;
+			innerDiv.classList.remove("open");
+		});
+}
+
 function createCheckbox(target, label, onChange) {
 	let id = label.toLowerCase().replace(/\s+/g , "-");
 	let div = target.append("div").classed("customCheckbox", true);

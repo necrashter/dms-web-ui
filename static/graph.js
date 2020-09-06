@@ -551,7 +551,7 @@ class Graph {
 		var decorators = [];
 		const branchMode = this.mode == 0 ? "branches" : "nodes";
 		let pfInterpolator;
-		if(Settings.colorizedPfs) 
+		if(Settings.colorized) 
 			pfInterpolator = d3.interpolateRgb(Colors.shadow, Colors.risky);
 		else
 			pfInterpolator = (_) => Colors.shadow;
@@ -620,7 +620,7 @@ class Graph {
 			} else if(node.status<0) {
 				color = Colors.damaged;
 			} else {
-				color = pfInterpolator(node.pf);
+				color = pfInterpolator(node[Settings.colorizationTarget]);
 			}
 
 			//markers.push(L.marker(latlng, {icon: testIcon}));
@@ -632,7 +632,8 @@ class Graph {
 				weight: nodeWeight,
 				pane: "nodes"
 			});
-			if(node.status == 0 && node.pf > riskThreshold) {
+			if(node.status == 0 &&
+				 node[Settings.colorizationTarget] > riskThreshold) {
 				circle.originalColor = color;
 				this.riskyNodes.push(circle);
 			}
@@ -1086,9 +1087,24 @@ class Graph {
 		for(let s of hist) {
 			this._setState(s);
 		}
+		if(Settings.colorized && Settings.colorizationTarget === "cpf") {
+			this.calculateCumulativePfs();
+		}
 		this.rerender();
 		if(BottomRightPanel.contentInfo && BottomRightPanel.contentInfo.node) {
 			this.showNodeInfo(BottomRightPanel.contentInfo.node);
+		}
+	}
+	calculateCumulativePfs() {
+		if(policyView) {
+			let cpfs = policyView.policy.cumulativePfs();
+			for(let i = 0; i<cpfs.length; ++i) {
+				this.nodes[i].cpf = cpfs[i];
+			}
+		} else {
+			for(let i = 0; i<cpfs.length; ++i) {
+				this.nodes[i].cpf = 0;
+			}
 		}
 	}
 	cancelUpdate() {

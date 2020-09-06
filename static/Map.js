@@ -1,7 +1,8 @@
 var Settings = {
 	animateAnts: true,
 	arrows: false,
-	colorizedPfs: true,
+	colorized: true,
+	colorizationTarget: "pf",
 }
 
 const Map = L.map('map', {
@@ -56,7 +57,9 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 
 (function() { // limits the scope
 	var innerDiv;
-	const wrapperDiv = d3.create("div").attr("class","CustomSelect");
+	const wrapperDiv = d3.create("div")
+		.attr("class","CustomSelect")
+		.style("z-index", 20);
 	var headDiv = wrapperDiv.append("div")
 		.attr("class", "CustomSelectHead")
 		.style("width", "12em")
@@ -109,21 +112,52 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 	// 	checkbox.node().checked = Settings.arrows;
 	// 	TopRightPanel.appendChild(div.node());
 	// }
-	{
-		let div = d3.create("div").classed("customCheckbox", true);
-		let checkbox = div.append("input")
-			.attr("id", "colorizedPfs")
-			.attr("type", "checkbox")
-			.on("change", () => {
-				Settings.colorizedPfs = checkbox.node().checked;
-				if(graph) graph.rerender();
-			});
-		checkbox.node().checked = Settings.colorizedPfs;
-		div.append("label")
-			.attr("for", "colorizedPfs")
-			.html("Colorize by P<sub>f</sub>");
-		TopRightPanel.appendChild(div.node());
-	}
+	// {
+	// 	let div = d3.create("div").classed("customCheckbox", true);
+	// 	let checkbox = div.append("input")
+	// 		.attr("id", "colorized")
+	// 		.attr("type", "checkbox")
+	// 		.on("change", () => {
+	// 			Settings.colorized = checkbox.node().checked;
+	// 			if(graph) graph.rerender();
+	// 		});
+	// 	checkbox.node().checked = Settings.colorized;
+	// 	div.append("label")
+	// 		.attr("for", "colorized")
+	// 		.html("Colorize by P<sub>f</sub>");
+	// 	TopRightPanel.appendChild(div.node());
+	// }
+	let colorOptions = [
+		{
+			name: "No colorization",
+			func: () => {
+				Settings.colorized = false;
+				if(graph)
+					graph.rerender();
+			}
+		},
+		{
+			name: "By P<sub>f</sub>",
+			func: () => {
+				Settings.colorized = true;
+				Settings.colorizationTarget = "pf";
+				if(graph)
+					graph.rerender();
+			}
+		},
+		{
+			name: "By Cumulative P<sub>f</sub>",
+			func: () => {
+				Settings.colorized = true;
+				Settings.colorizationTarget = "cpf";
+				if(graph) {
+					graph.calculateCumulativePfs();
+					graph.rerender();
+				}
+			}
+		},
+	];
+	createCustomSelectBox(d3.select(TopRightPanel), colorOptions, 1);
 })();
 
 
