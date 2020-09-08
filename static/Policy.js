@@ -316,8 +316,9 @@ function selectPrioritizedNode(div, graph){
 	let algorithms = [
 		{ name: "S3P", value: "s3p" },
 		{ name: "Cost Modification", value: "costmod" },
+		{ name: "Custom", value: "custom" },
 	];
-	let selectedAlgo = 0;
+	let selectedAlgo = 2;
 	let algoDiv = div.append("div");
 	let algoDivs = algoDiv.selectAll("div").data(algorithms).join("div")
 		.classed("customCheckbox", true)
@@ -326,6 +327,7 @@ function selectPrioritizedNode(div, graph){
 		.attr("type", "radio")
 		.attr("name", "algos")
 		.attr("id", d => "algo-"+d.value)
+		.attr("checked", (_,i) => i == selectedAlgo)
 		.on("change", (_, i) => selectedAlgo = i);
 	algoDivs.append("label")
 		.text(d => "Use "+d.name)

@@ -230,15 +230,18 @@ const MapThemes = {
 	},
 	"Dark": {
 		colors: {
-			action: "#0000FF",
-			energized: "#30FF30",
+			action: "#3050FF",
+			energized: "#60FF60",
 			damaged: "#FF0000",
-			shadow: "#bac2cc",
+			shadow: "#929292",
 			risky: "#FFFF00",
 		},
 		css: `
 			.leaflet-tile {
-				filter: invert();
+				filter: invert() brightness(0.5);
+			}
+			#map {
+				background: black;
 			}
 		`
 	}
@@ -253,3 +256,4 @@ function setMapTheme(name) {
 		throw new Error("Theme not found with name: "+name);
 	}
 }
+// setMapTheme("Dark")
