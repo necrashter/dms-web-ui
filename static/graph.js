@@ -89,6 +89,19 @@ function createArrowDecorator(line, nodeStatus=1) {
 	});
 }
 
+var NodeNaming = {
+	name: function(node) {
+		return node.name ? node.name : "Node #"+node.index;
+	},
+	id: function(node) {
+		return node.index;
+	},
+};
+function getNodeName(node) {
+	return NodeNaming[Settings.nodeName](node);
+}
+
+
 class Graph {
 	constructor(map, options) {
 		this.map = map;
@@ -263,7 +276,7 @@ class Graph {
 		// Lat: ${Math.round(10000*event.target._latlng.lat)/10000} <br/>
 		// Lng: ${Math.round(10000*event.target._latlng.lng)/10000}
 		Tooltip.div.innerHTML =
-			`<b>${node.name ? node.name : "Node #"+node.index}</b> <br/>
+			`<b>${getNodeName(node)}</b> <br/>
 			  Status: ${status} <br/>
 			P<sub>f</sub>: ${pf != null ? pf.toFixed(3) : "Unknown"}
 		`;
@@ -286,7 +299,7 @@ class Graph {
 			node: node,
 		});
 		BottomRightPanelContent.innerHTML = `
-			<h1>${node.name ? node.name : "Node #"+node.index}</h1>
+			<h1>${getNodeName(node)}</h1>
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
 			<p>Status: ${status}</p>
@@ -314,7 +327,7 @@ class Graph {
 			node: node,
 		});
 		BottomRightPanelContent.innerHTML = `
-			<h1>${node.name ? node.name : "Node #"+node.index}</h1>
+			<h1>${getNodeName(node)}</h1>
 			<p>Lat: ${Math.round(10000*node.latlng[0])/10000}</p>
 			<p>Lng: ${Math.round(10000*node.latlng[1])/10000}</p>
 			<p>Status: ${status}</p>

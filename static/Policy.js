@@ -229,7 +229,10 @@ function loadPolicy(div, graph, policy, options={}) {
 		if(options.prioritized) {
 			ul.append("li").text("Prioritized nodes: ")
 			.append("ul").selectAll("li").data(options.prioritized).join("li")
-				.text((p,i) => "Class "+(i+1)+": "+p.join(" "));
+				.text((p,i) => 
+					"Class "+(i+1)+": "+
+					p.map(i => getNodeName(graph.nodes[i])).join(", ")
+				);
 			ul.append("li").text("Prioritization Algorithm: " + options.algo);
 		} else {
 			ul.append("li").text("No prioritization");

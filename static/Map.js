@@ -3,6 +3,7 @@ var Settings = {
 	arrows: false,
 	colorized: true,
 	colorizationTarget: "pf",
+	nodeName: "name", // "name", "index", "id"
 }
 
 const Map = L.map('map', {
