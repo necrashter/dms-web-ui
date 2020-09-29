@@ -320,8 +320,9 @@ function selectPrioritizedNode(div, graph){
 		{ name: "S3P", value: "s3p" },
 		{ name: "Cost Modification", value: "costmod" },
 		{ name: "Custom", value: "custom" },
+		{ name: "Custom Alternative", value: "custom2" },
 	];
-	let selectedAlgo = 2;
+	let selectedAlgo = algorithms.length - 1;
 	let algoDiv = div.append("div");
 	let algoDivs = algoDiv.selectAll("div").data(algorithms).join("div")
 		.classed("customCheckbox", true)
