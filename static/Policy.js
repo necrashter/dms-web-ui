@@ -319,8 +319,10 @@ function selectPrioritizedNode(div, graph){
 	let algorithms = [
 		{ name: "S3P", value: "s3p" },
 		{ name: "Cost Modification", value: "costmod" },
-		{ name: "Custom", value: "custom" },
-		{ name: "Custom Alternative", value: "custom2" },
+		{ name: "Custom MaxMin", value: "custom_maxmin" },
+		{ name: "Custom MinMin", value: "custom_minmin" },
+		{ name: "Greedy", value: "greedy" },
+		{ name: "Average", value: "average" },
 	];
 	let selectedAlgo = algorithms.length - 1;
 	let algoDiv = div.append("div");
