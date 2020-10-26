@@ -221,6 +221,78 @@ class InteractivePolicy {
 		Object.assign(this, policy);
 		this.setAction(this.policy[this.state], next);
 	}
+
+	/**
+	 * for paper
+	 */
+	createGraph() {
+		let height = 12;
+		let width = 40;
+		let widthMod = -0.01;
+		let s = this.state+1; // 1 indexing used in dists and values
+		let actions = this.actions;
+		let dists = this.dists[s]; // 1 indexing
+		let values = this.values[s];
+		// NOTE: assumes that no two actions can end in the same state
+		let endStateLength = Object.values(actions).map(action => action.length)
+			.reduce((i, c) => i+c, 0);
+		let totalHeight = Math.max((endStateLength-1) * height, 0);
+		let startHeight = totalHeight/2;
+		let currentHeight = startHeight;
+		let matrix = ``;
+
+		let state = "{\\small(" + this.states[s-1].toString().replaceAll("TG", "E_") + ")}";
+		let output = `
+\\begin{tikzpicture}[auto,node distance=8mm,>=latex,font=\\small]
+\\tikzstyle{round}=[thick,draw=black,circle]
+
+\\begin{scope}
+\\node[round, label=west:$${state}$] (s${s}) {$s_{${s}}$};
+		`;
+		for(let actKey in actions) {
+			output += `%% ACTION ${actKey}\n`;
+			let action = actions[actKey];
+			for(let endKey in action) {
+				let end = action[endKey];
+				let e = end[0];
+				let w = width + (widthMod* Math.pow(currentHeight, 2));
+				let st = "{\\small (" + this.states[e-1].toString().replaceAll("TG", "E_") + ")}";
+				let p = end[1].toFixed(3);
+				output += `
+\\node[round,above right=${currentHeight}mm and ${w}mm of s${s}, label=0:$${st}$] (s${e}) {$s_{${e}}$};
+\\draw[->] (s${s}) -- (s${e});
+\\draw (s${s}) -- (s${e}) node [pos=.7, above, sloped] (TextNode) {\\scriptsize $p \\approx ${p}$};
+				`;
+				currentHeight -= height;
+			}
+			let firstEnd = action[0][0];
+			let lastEnd = action[action.length-1][0];
+			let value = values[actKey].toFixed(3);
+			output += `
+\\path pic[draw, angle radius=10mm,"$a_{${actKey}}$",angle eccentricity=1.5]
+			{angle = s${lastEnd}--s${s}--s${firstEnd}};
+			`;
+			let cols = [];
+			for(let goal in dists) {
+				let dist = dists[goal][actKey].toFixed(3);
+				cols.push(`$D^{[${goal}]}(s_{${s}}, a_{${actKey}}) = ${dist}$`);
+			}
+			cols.push(`$V(s_{${s}}, a_{${actKey}}) = ${value}$`);
+			matrix += `${cols.join(", & ")} \\\\\n`;
+		}
+		output += `
+\\end{scope}
+\\end{tikzpicture}
+
+\\begin{center}
+\\begin{tabular}{ ${Object.keys(dists).map(() => "l").join(" ")} l }
+${matrix}
+\\end{tabular}
+\\end{center}
+		`;
+		AdvancedCopy(output);
+		return output;
+	}
 }
 
 function loadPolicy(div, graph, policy, options={}) {
@@ -554,6 +626,12 @@ class InteractivePolicyView {
 		}
 
 		if(this.policy.nextStateAvailable()) {
+			buttonDiv.append("div").classed("blockButton", true)
+				.text("krink")
+				.on("click", krink)
+			buttonDiv.append("div").classed("blockButton", true)
+				.text("grink")
+				.on("click", getGraphDiagram)
 			// select box for action
 			var innerDiv;
 			const wrapperDiv = this.div.append("div")

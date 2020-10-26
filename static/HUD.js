@@ -113,3 +113,121 @@ function addSpinnerDiv(div) {
 	out.append("div").classed("spinner", true);
 	return out;
 }
+
+
+
+function AdvancedCopy(theText){
+     //create our hidden div element
+     var hiddenCopy = document.createElement('div');
+     //set the innerHTML of the div
+     hiddenCopy.innerText = theText;
+     //set the position to be absolute and off the screen
+     hiddenCopy.style.position = 'absolute';
+     hiddenCopy.style.left = '-9999px';
+ 
+     //check and see if the user had a text selection range
+     var currentRange;
+     if(document.getSelection().rangeCount > 0)
+     {
+          //the user has a text selection range, store it
+          currentRange = document.getSelection().getRangeAt(0);
+          //remove the current selection
+          window.getSelection().removeRange(currentRange);
+     }
+     else
+     {
+          //they didn't have anything selected
+          currentRange = false;
+     }
+ 
+     //append the div to the body
+     document.body.appendChild(hiddenCopy);
+     //create a selection range
+     var CopyRange = document.createRange();
+     //set the copy range to be the hidden div
+     CopyRange.selectNode(hiddenCopy);
+     //add the copy range
+     window.getSelection().addRange(CopyRange);
+ 
+     //since not all browsers support this, use a try block
+     try
+     {
+          //copy the text
+          document.execCommand('copy');
+     }
+     catch(err)
+     {
+          window.alert("Your Browser Doesn't support this! Error : " + err);
+     }
+     //remove the selection range (Chrome throws a warning if we don't.)
+     window.getSelection().removeRange(CopyRange);
+     //remove the hidden div
+     document.body.removeChild(hiddenCopy);
+ 
+     //return the old selection range
+     if(currentRange)
+     {
+          window.getSelection().addRange(currentRange);
+     }
+}
+
+function getGraphDiagram() {
+	function euclid(a, b) {
+		return Math.sqrt(Math.pow(a[0]-b[0], 2) + Math.pow(a[1]-b[1], 2));
+	}
+	let output = `
+\\begin{tikzpicture}[auto,node distance=8mm,>=latex,font=\\small]
+\\tikzstyle{round}=[thick,draw=black,circle]
+\\begin{scope}[local bounding box=graph]
+	`;
+	let distanceMul = 2;
+	let center = graph.nodes[0].latlng;
+	let totalDistance = 0;
+	for(let edge of graph.branches) {
+		totalDistance += euclid(graph.nodes[edge.nodes[0]].latlng, graph.nodes[edge.nodes[1]].latlng);
+	}
+	totalDistance /= graph.branches.length;
+	distanceMul /= totalDistance;
+	for(let node of graph.nodes) {
+		let pos = [...node.latlng];
+		pos[0] -= center[0];
+		pos[1] -= center[1];
+		pos[0] *= distanceMul;
+		pos[1] *= distanceMul;
+		let i = node.index;
+		let external = "";
+		if(node.externalBranches) {
+			let sources = node.externalBranches.map(b => "E_{"+b.branch.source+"}");
+			if(sources.length > 0)
+				external = `, label=0:{Connected to $${sources.toString()}$}`;
+		}
+		pos.reverse();
+		output += `
+\\node[round, label=south:$${node.pf.toFixed(3)}$${external}] (${i}) at (${pos.toString()}) {${i+1}};\
+`;
+	}
+	for(let edge of graph.branches) {
+		output+=`
+\\draw[-] (${edge.nodes[0]}) -- (${edge.nodes[1]});\
+`;
+	}
+	output += `
+\\end{scope}
+\\end{tikzpicture}
+	`;
+	AdvancedCopy(output);
+	return output;
+}
+
+var krinkOut= "";
+function krink() {
+	let output = "";
+	while(policyView.policy.nextStateAvailable()) {
+		output += policyView.policy.createGraph();
+		policyView.policy.nextState();
+		policyView.policyNavigator(); // refresh
+	}
+	AdvancedCopy(output);
+	krinkOut=output;
+	return output;
+}
