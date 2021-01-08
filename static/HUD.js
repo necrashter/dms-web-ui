@@ -221,6 +221,8 @@ function getGraphDiagram() {
 
 var krinkOut= "";
 function krink() {
+	krinkOut = policyView.policy.createGraph2();
+	/*
 	let output = "";
 	while(policyView.policy.nextStateAvailable()) {
 		output += policyView.policy.createGraph();
@@ -230,4 +232,5 @@ function krink() {
 	AdvancedCopy(output);
 	krinkOut=output;
 	return output;
+	*/
 }

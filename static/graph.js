@@ -1115,8 +1115,10 @@ class Graph {
 				this.nodes[i].cpf = cpfs[i];
 			}
 		} else {
-			for(let i = 0; i<cpfs.length; ++i) {
-				this.nodes[i].cpf = 0;
+			console.log("Warning: no policyView in calculateCumulativePfs");
+			// TODO: to fully fix this, generate and send MDP before policy
+			for(let i = 0; i<this.nodes.length; ++i) {
+				this.nodes[i].cpf = this.nodes[i].pf;
 			}
 		}
 	}

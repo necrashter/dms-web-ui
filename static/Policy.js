@@ -1,5 +1,6 @@
 
 var policyView = null;
+const defaultHorizon = 30;
 
 function getNumberIcon(name) {
 	let width = name.toString().length*7+20;
@@ -225,8 +226,93 @@ class InteractivePolicy {
 	/**
 	 * for paper
 	 */
+	createGraph2() {
+		const preci = 6;
+		let s = this.state+1; // 1 indexing used in dists and values
+		let actions = this.actions;
+		let dists = this.dists[s]; // 1 indexing
+		let probs = this.probs[s]; // 1 indexing
+		let values = this.values[s];
+		// NOTE: assumes that no two actions can end in the same state
+		let endStateLength = Object.values(actions).map(action => action.length)
+			.reduce((i, c) => i+c, 0);
+		let currentState = this.states[s-1];
+		let state = "{(" + this.states[s-1].toString().replaceAll(/TG\d+/g, "E") + ")}";
+		let output = "";
+		let lll = "l|";
+		let optHeader = "Action ";
+		let optBody = "";
+		for(let actKey in actions) {
+			let action = actions[actKey];
+			let actionName = "\\{" + this.states[action[0][0]-1].map((s, i) => s == currentState[i] ? -1 : i+1).filter(s => s != -1).join(", ")+"\\}";
+			let ah = `\\multirow{${action.length}}{*}{$${actionName}$}`;
+			output += ` \\hline
+			`;
+			for(let endKey in action) {
+				let end = action[endKey];
+				let e = end[0];
+				let st = "{(" + this.states[e-1].toString().replaceAll(/TG\d+/g, "E") + ")}";
+				let p = end[1].toFixed(3);
+				output += `${ah} & ${p} & $s_{${e}} = ${st}$ \\\\
+				`;
+				ah = "";
+			}
+			let firstEnd = action[0][0];
+			let lastEnd = action[action.length-1][0];
+			let value = values[actKey].toFixed(preci);
+			let cols = [];
+			for(let goal in probs) {
+				let prob = probs[goal][actKey].toFixed(preci);
+				cols.push(`$${prob}$`);
+				if(actKey == 1) {
+					optHeader += ` & $P_{\\infty, ${goal}}^{\\star}$ `
+					lll += "l ";
+				}
+			}
+			for(let goal in dists) {
+				let dist = dists[goal][actKey].toFixed(preci);
+				cols.push(`$${dist}$`);
+				if(actKey == 1) {
+					optHeader += ` & $C_{\\infty, ${goal}}^{\\star}$ `
+					lll += "l ";
+				}
+			}
+			if(actKey == 1) {
+				optHeader += ` & $V$ `
+				lll += "l ";
+			}
+			cols.push(`$${value}$`);
+			optBody += `$${actionName}$ & ${cols.join(" & ")} \\\\\n`;
+		}
+		let output3 = `
+		\\begin{table}[h]
+	\\centering
+	\\caption{Transitions from $s_{${s}} = ${state}$}
+	\\begin{tabular} {c|c|c}
+		Action & Probability & Next State \\\\
+		${output}
+	\\end{tabular}
+	\\label{transitions:s${s}}
+\\end{table}
+
+\\begin{table}[h]
+	\\centering
+	\\caption{Optimal values for $s_{${s}}$}
+	\\begin{tabular}{ ${lll}}
+		${optHeader} \\\\
+		\\hline
+		${optBody}
+\\end{tabular}
+\\label{distances:s${s}}
+\\end{table}
+		`;
+		AdvancedCopy(output3);
+		return output3;
+	}
+	/**
+	 * for paper
+	 */
 	createGraph() {
-		let height = 12;
 		let width = 40;
 		let widthMod = -0.01;
 		let s = this.state+1; // 1 indexing used in dists and values
@@ -236,7 +322,6 @@ class InteractivePolicy {
 		// NOTE: assumes that no two actions can end in the same state
 		let endStateLength = Object.values(actions).map(action => action.length)
 			.reduce((i, c) => i+c, 0);
-		let totalHeight = Math.max((endStateLength-1) * height, 0);
 		let startHeight = totalHeight/2;
 		let currentHeight = startHeight;
 		let matrix = ``;
@@ -385,7 +470,7 @@ function getPolicy(div, graph) {
 function selectPrioritizedNode(div, graph){
 	div.html("");
 	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
-	let horizon = createTextInput(div, "Horizon", 10);
+	let horizon = createTextInput(div, "Horizon", defaultHorizon);
 	let errorDiv = div.append("p").text("")
 		.style("color", "red");
 	let algorithms = [
@@ -508,7 +593,7 @@ function selectPrioritizedNode(div, graph){
 function selectPolicyOptions(div, graph){
 	div.html("");
 	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
-	let horizon = createTextInput(div, "Horizon", 10);
+	let horizon = createTextInput(div, "Horizon", defaultHorizon);
 	let shortSighted = false;
 	createCheckbox(div, "Short-sighted", val => {
 		shortSighted = val;
