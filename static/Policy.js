@@ -475,7 +475,8 @@ function selectPrioritizedNode(div, graph){
 		.style("color", "red");
 	let algorithms = [
 		{ name: "S3P", value: "s3p" },
-		{ name: "Cost Modification", value: "costmod" },
+		{ name: "Arpali Dummy", value: "arpali_dummy" },
+		{ name: "Gol Dummy", value: "gol_dummy" },
 		{ name: "Custom MaxMin", value: "custom_maxmin" },
 		{ name: "Custom MinMin", value: "custom_minmin" },
 		{ name: "Greedy", value: "greedy" },
