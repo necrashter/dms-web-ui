@@ -202,6 +202,11 @@ html, body {
 	border-radius: 8px;
 }
 
+#Tooltip * {
+	margin: 2px;
+	padding: 2px;
+}
+
 #Tooltip.hidden {
 	visibility: hidden;
 	opacity: 0;

@@ -17,7 +17,7 @@ class LinearPolicy extends InteractivePolicy {
 			let actions = this.transitions[current];
 			let actionNum = this.policy[current];
 			let action = actions[actionNum];
-			let next = action[0][0] - 1;
+			let next = action[0][0] + ACTION_OFFSET;
 			if(next == current) break;
 			this.fullHistory.push({
 				state: current,

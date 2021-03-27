@@ -2,6 +2,23 @@
 var policyView = null;
 const defaultHorizon = 30;
 
+const ACTION_OFFSET = 0;//-1;
+
+const TeamIcons = d3.schemeCategory10.map(color => {
+	const svgTemplate = `
+	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="marker">
+	  <path fill-opacity=".25" d="M16 32s1.427-9.585 3.761-12.025c4.595-4.805 8.685-.99 8.685-.99s4.044 3.964-.526 8.743C25.514 30.245 16 32 16 32z"/>
+	  <path fill="${color}" stroke="#000" d="M15.938 32S6 17.938 6 11.938C6 .125 15.938 0 15.938 0S26 .125 26 11.875C26 18.062 15.938 32 15.938 32zM16 6a4 4 0 100 8 4 4 0 000-8z"/>
+	</svg>`;
+
+	return L.divIcon({
+		className: "marker",
+		html: svgTemplate,
+		iconSize: [40, 40],
+		iconAnchor: [20, 40]
+	});
+});
+
 function getNumberIcon(name) {
 	let width = name.toString().length*7+20;
 	return L.divIcon({
@@ -44,7 +61,7 @@ class InteractivePolicy {
 		this.actionNum = actionNum;
 		this.action = this.actions[actionNum];
 		if(this.action) {
-			this.end = this.action.length == 1 && this.action[0][0]-1 == this.state;
+			this.end = this.action.length == 1 && this.action[0][0]+ACTION_OFFSET == this.state;
 		} else {
 			this.end = true;
 		}
@@ -71,7 +88,7 @@ class InteractivePolicy {
 	setNext(i) {
 		// represents which transition to take in the current action
 		this.next = i;
-		let nextState = this.states[this.action[this.next][0] - 1];
+		let nextState = this.states[this.action[this.next][0] + ACTION_OFFSET];
 		let hist = this.previousStates.map(s => this.states[s.state]);
 		hist.push(this.states[this.state]);
 		hist.push(nextState);
@@ -81,7 +98,13 @@ class InteractivePolicy {
 		return this.states[this.state];
 	}
 	getNextState() {
-		return this.states[this.action[this.next][0] - 1];
+		return this.states[this.action[this.next][0] + ACTION_OFFSET];
+	}
+	getCurrentTeams() {
+		return this.teams[this.state];
+	}
+	getNextTeams() {
+		return this.teams[this.action[this.next][0] + ACTION_OFFSET];
 	}
 	describeAction(actionNum = null) {
 		if(actionNum == null) actionNum =this.actionNum;
@@ -92,7 +115,7 @@ class InteractivePolicy {
 		return output;
 	}
 	describeTransition(action, i) {
-		let nextState = this.states[action[0] - 1];
+		let nextState = this.states[action[0] + ACTION_OFFSET];
 		let currentState = this.states[this.state];
 		let list = "";
 		for(let i = 0; i < currentState.length; ++i) {
@@ -112,7 +135,7 @@ class InteractivePolicy {
 			actionNum: this.actionNum,
 			next: this.next,
 		});
-		this.setState(this.action[this.next][0] - 1);
+		this.setState(this.action[this.next][0] + ACTION_OFFSET);
 	}
 	previousState() {
 		let prev = this.previousStates.pop();
@@ -668,13 +691,49 @@ class InteractivePolicyView {
 		this.createMarkerLayer();
 		//this.policyNavigator();
 	}
+	teamOnMouseOver(event) {
+		let index = event.target.data;
+		let team = this.policy.getCurrentTeams()[index];
+		let next = this.policy.end ? null : this.policy.getNextTeams()[index];
+		let div = d3.select(Tooltip.div);
+		div.html("");
+		div.append("b").text(`Team #${index+1}`);
+		if(team.node != null) {
+			div.append("p").text("Currently at node #"+team.node);
+		}
+		if(next) {
+			div.append("p").text("Will move to #"+next.node);
+		}
+		Tooltip.show(event.originalEvent);
+	}
 	createMarkerLayer() {
 		// remove the old one if any
 		if(this.markerLayer) this.markerLayer.remove();
-		if(this.policy.end) return;
+		this.markers = [];
+		if(this.policy.end) {
+			// just render teams and return
+			if(this.policy.teams) {
+				let currentTeams = this.policy.getCurrentTeams();
+				for(let i=0; i<currentTeams.length; ++i) {
+					let color = d3.schemeCategory10[i];
+					let node = this.policy.teamNodes[currentTeams[i].node];
+					let m = L.marker(node, {
+						icon: TeamIcons[i],
+						color: color,
+						pane: "resources",
+					});
+					m.data = i;
+					m.on("mouseover", this.teamOnMouseOver.bind(this));
+					m.on("mouseout", Tooltip.hide.bind(Tooltip));
+					this.markers.push(m);
+				}
+			}
+			this.markerLayer = L.layerGroup(this.markers);
+			this.markerLayer.addTo(Map);
+			return;
+		}
 		let currentState = this.policy.getCurrentState();
 		let nextState = this.policy.getNextState();
-		this.markers = [];
 		for(let i=0; i<currentState.length; ++i) {
 			if(currentState[i] != nextState[i]) {
 				let node = this.graph.nodes[i];
@@ -684,6 +743,46 @@ class InteractivePolicyView {
 					pane: "resources",
 				});
 				this.markers.push(m);
+			}
+		}
+		if(this.policy.teams) {
+			let currentTeams = this.policy.getCurrentTeams();
+			let nextTeams = this.policy.getNextTeams();
+			for(let i=0; i<currentTeams.length; ++i) {
+				let color = d3.schemeCategory10[i];
+				let node = this.policy.teamNodes[currentTeams[i].node];
+				let nextNode = this.policy.teamNodes[nextTeams[i].node];
+				let m = L.marker(node, {
+					icon: TeamIcons[i],
+					color: color,
+					pane: "resources",
+				});
+				m.data = i;
+				m.on("mouseover", this.teamOnMouseOver.bind(this));
+				m.on("mouseout", Tooltip.hide.bind(Tooltip));
+				this.markers.push(m);
+				if(node != nextNode) {
+					let line = L.polyline([node, nextNode], {
+						color: color,
+						dashArray: "10, 10",
+						weight: 2,
+						smoothFactor: 1,
+						pane: "teamArrows"
+					});
+					let deco = L.polylineDecorator( line, {
+						patterns: [
+							{offset: 60, repeat: 60, symbol: L.Symbol.arrowHead({
+								pixelSize: 20,
+								pathOptions: {
+									color: color, fillOpacity: 1, weight: 0,
+									pane: "teamArrows"
+								},
+							})},
+						],
+					});
+					this.markers.push(line);
+					this.markers.push(deco);
+				}
 			}
 		}
 		this.markerLayer = L.layerGroup(this.markers);
@@ -712,12 +811,14 @@ class InteractivePolicyView {
 		}
 
 		if(this.policy.nextStateAvailable()) {
+			/*
 			buttonDiv.append("div").classed("blockButton", true)
 				.text("krink")
 				.on("click", krink)
 			buttonDiv.append("div").classed("blockButton", true)
 				.text("grink")
 				.on("click", getGraphDiagram)
+			*/
 			// select box for action
 			var innerDiv;
 			const wrapperDiv = this.div.append("div")

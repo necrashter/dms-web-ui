@@ -3,7 +3,7 @@ var Settings = {
 	arrows: false,
 	colorized: true,
 	colorizationTarget: "pf",
-	nodeName: "name", // "name", "index", "id"
+	nodeName: "id", // "name", "id"
 }
 
 const Map = L.map('map', {
@@ -191,7 +191,9 @@ Map.on("contextmenu", event => {
 	event.originalEvent.preventDefault();
 });
 
-// resources must have the highest z index
+Map.createPane("teamArrows");
+Map.getPane('teamArrows').style.zIndex = 800;
+Map.getPane('teamArrows').style.pointerEvents = "None";
 Map.createPane("resources");
 Map.getPane('resources').style.zIndex = 700;
 Map.createPane("nodes");
