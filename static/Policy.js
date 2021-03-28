@@ -684,6 +684,7 @@ class InteractivePolicyView {
 		this.policy = policy;
 		this.options = options;
 		Object.assign(this, options);
+		this.teamMarkers = [];
 		this.policyNavigator();
 	}
 	setNext(i) {
@@ -698,14 +699,86 @@ class InteractivePolicyView {
 		let div = d3.select(Tooltip.div);
 		div.html("");
 		div.append("b").text(`Team #${index+1}`);
-		if(team.node != null) {
-			div.append("p").text("Currently at node #"+team.node);
-		}
-		if(next) {
-			div.append("p").text("Will move to #"+next.node);
+		let info = event.target.tooltipInfo;
+		for(let text of info) {
+			div.append("p").text(text);
 		}
 		Tooltip.show(event.originalEvent);
 	}
+
+	renderTeam(i, currentTeam, nextTeam) {
+		let color = d3.schemeCategory10[i];
+		let node = this.policy.teamNodes[currentTeam.node];
+		let nextNode = null;
+		let position = node;
+		let info = [];
+		if(currentTeam.target) {
+			nextNode = this.policy.teamNodes[currentTeam.target];
+			let percent = currentTeam.time / currentTeam.travelTime;
+			position = [
+				node[0]*(1-percent) + nextNode[0]*percent,
+				node[1]*(1-percent) + nextNode[1]*percent
+			];
+			if(currentTeam.node < this.graph.nodes.length) {
+				info.push("Was previously at node #" + currentTeam.node);
+			}
+			info.push("Moving to #" + currentTeam.target + ", "+
+				(currentTeam.travelTime-currentTeam.time) +" seconds remaining.");
+		} else if(nextTeam) {
+			let nextNodeId = nextTeam.target ? nextTeam.target : nextTeam.node;
+			nextNode = this.policy.teamNodes[nextNodeId];
+			if(currentTeam.node < this.graph.nodes.length) {
+				info.push("Currently at node #" + currentTeam.node);
+			}
+			info.push("Will move to #" + nextNodeId + ".");
+		} else if(currentTeam.node < this.graph.nodes.length) {
+			info.push("Currently at node #" + currentTeam.node);
+		}
+		if(nextNode != null) {
+			let line = L.polyline([node, nextNode], {
+				color: color,
+				dashArray: "10, 10",
+				weight: 2,
+				smoothFactor: 1,
+				pane: "teamArrows"
+			});
+			let deco = L.polylineDecorator( line, {
+				patterns: [
+					{offset: 60, repeat: 60, symbol: L.Symbol.arrowHead({
+						pixelSize: 20,
+						pathOptions: {
+							color: color, fillOpacity: 1, weight: 0,
+							pane: "teamArrows"
+						},
+					})},
+				],
+			});
+			this.markers.push(line);
+			this.markers.push(deco);
+		}
+		if(this.teamMarkers[i]) {
+			let m = this.teamMarkers[i];
+			m._icon.style.transition = '0.6s';
+			m.setLatLng(position);
+			m.tooltipInfo = info;
+		} else {
+			let m = L.marker(position, {
+				icon: TeamIcons[i],
+				color: color,
+				pane: "teams",
+			});
+			m.data = i;
+			m.tooltipInfo = info;
+			m.on("mouseover", this.teamOnMouseOver.bind(this));
+			m.on("mouseout", Tooltip.hide.bind(Tooltip));
+			m.addTo(Map);
+			this.teamMarkers[i] = m;
+			m._icon.addEventListener("transitionend", () => {
+				m._icon.style.transition = '';
+			});
+		}
+	}
+
 	createMarkerLayer() {
 		// remove the old one if any
 		if(this.markerLayer) this.markerLayer.remove();
@@ -715,17 +788,8 @@ class InteractivePolicyView {
 			if(this.policy.teams) {
 				let currentTeams = this.policy.getCurrentTeams();
 				for(let i=0; i<currentTeams.length; ++i) {
-					let color = d3.schemeCategory10[i];
-					let node = this.policy.teamNodes[currentTeams[i].node];
-					let m = L.marker(node, {
-						icon: TeamIcons[i],
-						color: color,
-						pane: "resources",
-					});
-					m.data = i;
-					m.on("mouseover", this.teamOnMouseOver.bind(this));
-					m.on("mouseout", Tooltip.hide.bind(Tooltip));
-					this.markers.push(m);
+					let currentTeam = currentTeams[i];
+					this.renderTeam(i, currentTeam, null);
 				}
 			}
 			this.markerLayer = L.layerGroup(this.markers);
@@ -749,40 +813,9 @@ class InteractivePolicyView {
 			let currentTeams = this.policy.getCurrentTeams();
 			let nextTeams = this.policy.getNextTeams();
 			for(let i=0; i<currentTeams.length; ++i) {
-				let color = d3.schemeCategory10[i];
-				let node = this.policy.teamNodes[currentTeams[i].node];
-				let nextNode = this.policy.teamNodes[nextTeams[i].node];
-				let m = L.marker(node, {
-					icon: TeamIcons[i],
-					color: color,
-					pane: "resources",
-				});
-				m.data = i;
-				m.on("mouseover", this.teamOnMouseOver.bind(this));
-				m.on("mouseout", Tooltip.hide.bind(Tooltip));
-				this.markers.push(m);
-				if(node != nextNode) {
-					let line = L.polyline([node, nextNode], {
-						color: color,
-						dashArray: "10, 10",
-						weight: 2,
-						smoothFactor: 1,
-						pane: "teamArrows"
-					});
-					let deco = L.polylineDecorator( line, {
-						patterns: [
-							{offset: 60, repeat: 60, symbol: L.Symbol.arrowHead({
-								pixelSize: 20,
-								pathOptions: {
-									color: color, fillOpacity: 1, weight: 0,
-									pane: "teamArrows"
-								},
-							})},
-						],
-					});
-					this.markers.push(line);
-					this.markers.push(deco);
-				}
+				let currentTeam = currentTeams[i];
+				let nextTeam = nextTeams[i];
+				this.renderTeam(i, currentTeam, nextTeam);
 			}
 		}
 		this.markerLayer = L.layerGroup(this.markers);
@@ -925,6 +958,11 @@ class InteractivePolicyView {
 	}
 	destroy() {
 		if(this.markerLayer) this.markerLayer.remove();
+		if(this.teamMarkers) {
+			for(let m of this.teamMarkers) {
+				m.remove();
+			}
+		}
 	}
 }
 

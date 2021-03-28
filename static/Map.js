@@ -191,6 +191,8 @@ Map.on("contextmenu", event => {
 	event.originalEvent.preventDefault();
 });
 
+Map.createPane("teams");
+Map.getPane('teams').style.zIndex = 801;
 Map.createPane("teamArrows");
 Map.getPane('teamArrows').style.zIndex = 800;
 Map.getPane('teamArrows').style.pointerEvents = "None";
