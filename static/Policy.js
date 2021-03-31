@@ -108,11 +108,39 @@ class InteractivePolicy {
 	}
 	describeAction(actionNum = null) {
 		if(actionNum == null) actionNum =this.actionNum;
-		let output =  "Action #"+actionNum;
+		let header =  "Action #"+actionNum;
 		if(actionNum == this.policy[this.state]) {
-			output += " (Policy)";
+			header += " <b>(Policy)</b>";
 		}
-		return output;
+		let action = this.actions[actionNum];
+		let currentState = this.states[this.state];
+		let nextState = this.states[action[0][0] + ACTION_OFFSET];
+		let energized = currentState.map((b, i) => b != nextState[i] ? i : null).filter(a => a != null);
+		let energizationInfo = "";
+		if(energized.length > 0) {
+			energizationInfo = "&emsp;Node(s): " + energized.join(", ") + "<br/>";
+		}
+		let teamInfo = "";
+		if(this.teams) {
+			let currentTeam = this.teams[this.state];
+			let nextTeam = this.teams[action[0][0] + ACTION_OFFSET];
+			let teamInfos = [];
+			for(let i = 0; i < currentTeam.length; ++i) {
+				if(nextTeam[i].target != null) {
+					teamInfos.push((i+1)+" to "+nextTeam[i].target);
+				} else if(currentTeam[i].node != nextTeam[i].node) {
+					teamInfos.push((i+1)+" to "+nextTeam[i].node);
+				}
+			}
+			if(teamInfos.length > 0) {
+				teamInfo = "&emsp;Team "+teamInfos.join(", ")+"<br/>";
+			}
+		}
+		return `
+		<b>${header}</b><br/>
+		${energizationInfo}
+		${teamInfo}
+		`;
 	}
 	describeTransition(action, i) {
 		let nextState = this.states[action[0] + ACTION_OFFSET];
@@ -686,6 +714,7 @@ class InteractivePolicyView {
 		Object.assign(this, options);
 		this.teamMarkers = [];
 		this.policyNavigator();
+		this.infoEnabled = true;
 	}
 	setNext(i) {
 		this.policy.setNext(i);
@@ -824,16 +853,41 @@ class InteractivePolicyView {
 	policyNavigator() {
 		this.createMarkerLayer();
 		this.div.html("");
-		if(this.prelude) this.prelude(this.div);
-		if(this.policy.duration) {
-			this.div.append("p")
-				.text("Elapsed time: "+this.policy.duration);
-		}
 		let buttonDiv = this.div.append("div").classed("policyControls", true);
 		let prev = buttonDiv.append("div").classed("blockButton", true)
 			.text("Previous Step");
 		let next = buttonDiv.append("div").classed("blockButton", true)
 			.text("Next Step");
+		let infoButton = buttonDiv.append("div").classed("blockButton", true)
+			.text(this.infoEnabled ? "Hide Info" : "Show Info");
+
+		let infoDiv = this.div.append("div");
+		if(this.prelude) this.prelude(infoDiv);
+		let infoList = infoDiv.append("ul");
+		if(this.policy.duration) {
+			infoList.append("li").text("Elapsed time: "+this.policy.duration);
+		}
+		infoList.append("li")
+			.text("State/States: "+this.policy.state+" / "+this.policy.states.length);
+		if(this.policy.times) {
+			let time = this.policy.times[this.policy.state];
+			infoList.append("li").text("Time: "+time);
+		}
+		if(!this.infoEnabled) {
+			infoDiv.style("display", "None");
+		}
+
+		infoButton.on("click", () => {
+			this.infoEnabled = !this.infoEnabled;
+			if(this.infoEnabled) {
+				infoButton.text("Hide Info");
+				infoDiv.style("display", "");
+			} else {
+				infoButton.text("Show Info");
+				infoDiv.style("display", "None");
+			}
+		});
+
 		if(this.policy.previousStates.length>0) {
 			prev.on("click", () => {
 				this.policy.previousState();
@@ -859,7 +913,7 @@ class InteractivePolicyView {
 				.attr("class","CustomSelect");
 			wrapperDiv.append("div")
 				.attr("class", "CustomSelectHead")
-				.text(this.policy.describeAction())
+				.html(this.policy.describeAction())
 				.on("click", function(_) {
 					innerDiv.classList.toggle("open");
 				}).node();
@@ -869,7 +923,7 @@ class InteractivePolicyView {
 			ul.selectAll("div")
 				.data(Object.keys(this.policy.actions)).join("div")
 				.attr("class", "CustomSelectElement")
-				.text((i) => this.policy.describeAction(i))
+				.html((i) => this.policy.describeAction(i))
 				.on("click", (i) => {
 					this.policy.setAction(i, 0);
 					this.policyNavigator();
