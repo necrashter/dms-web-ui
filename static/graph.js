@@ -977,6 +977,9 @@ class Graph {
 	}
 	normalContextMenu(event) {
 		let menu = d3.select("#ContextMenu").html("");
+		if(this.contextMenuListener) {
+			this.contextMenuListener(event, menu);
+		}
 		if(this.lastHover.hovered && this.lastHover.type == "node") {
 			menu.append("div")
 				.text("Update Bus")

@@ -28,33 +28,34 @@ function selectGraph(choices, prebody=null) {
 		// make sure that it runs only once
 		if(selected) return;
 		selected = true;
-		d.load();
-		markerLayer.remove();
-		header.classed("disabled", true);
-		body.transition().duration(500).style("height", "0")
-			.on("end", () => body.html(""));
-		content.append("div").classed("blockButton", true)
-			.text("Select another graph")
-			.on("click", () => {
-				content.transition().duration(300).style("opacity", "0")
-					.on("end", () => {
-						removePolicy();
-						graph.clear();
-						graph = null;
-						openSelectGraph();
-					});
-			});
-		let policyDiv;
-		resetPolicyScreen = () => {
+		d.load().then(() => {
+			markerLayer.remove();
+			header.classed("disabled", true);
+			body.transition().duration(500).style("height", "0")
+				.on("end", () => body.html(""));
+			content.append("div").classed("blockButton", true)
+				.text("Select another graph")
+				.on("click", () => {
+					content.transition().duration(300).style("opacity", "0")
+						.on("end", () => {
+							removePolicy();
+							graph.clear();
+							graph = null;
+							openSelectGraph();
+						});
+				});
+			let policyDiv;
+			resetPolicyScreen = () => {
 				removePolicy();
 				selectPolicyView(policyDiv, graph);
 			};
-		content.append("div").classed("blockButton", true)
-			.text("New policy")
-			.on("click", resetPolicyScreen);
-		content.append("h1").text("2. Synthesize Policy");
-		policyDiv = content.append("div");
-		selectPolicyView(policyDiv, graph);
+			content.append("div").classed("blockButton", true)
+				.text("New policy")
+				.on("click", resetPolicyScreen);
+			content.append("h1").text("2. Synthesize Policy");
+			policyDiv = content.append("div");
+			selectPolicyView(policyDiv, graph);
+		});
 	};
 	markers = choices.map((g,i) => {
 		let m = L.marker(g.view, {

@@ -11,6 +11,7 @@
 .CustomSelectHead {
 	position: relative;
 	padding: 0.3em 0.5em;
+	padding-right: 2em;
 	background: var(--blue-dark-bg);
 	/* width: 12em; */
 	border-radius: 16px;
@@ -19,16 +20,16 @@
 }
 .CustomSelectHead::before {
 	content: "";
-    position: absolute;
+	position: absolute;
 	top: 29%;
 	right: 0.5em;
 	bottom: 25%;
-    width: 20px;
+	width: 20px;
 	background: var(--blue-fg);
-    -webkit-clip-path: polygon(50% 73%, 0 0, 100% 0);
-    clip-path: polygon(50% 73%, 0 0, 100% 0);
-    padding: 10px;
-    box-sizing: border-box;
+	-webkit-clip-path: polygon(50% 73%, 0 0, 100% 0);
+	clip-path: polygon(50% 73%, 0 0, 100% 0);
+	padding: 10px;
+	box-sizing: border-box;
 }
 .CustomSelectHead::after {
 	content: '';

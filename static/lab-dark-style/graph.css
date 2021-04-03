@@ -70,6 +70,8 @@ filter: brightness(80%);
 	z-index: -1;
 }
 
+.descMarker:hover,
+.descMarker.hover,
 .blockMarker:hover {
 	background: var(--dark-accent);
 	/* background: var(--reverse-blue-bg); */

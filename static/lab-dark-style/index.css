@@ -343,8 +343,8 @@ h2 {
 }
 
 .blockButton.disabled {
-    color: gray;
-	cursor: not-allowed;
+	color: gray;
+	/* cursor: not-allowed; */
 }
 .blockButton.disabled:hover {
 	background: var(--blue-dark-bg);
@@ -526,6 +526,7 @@ input[type="text"] {
 	background: var(--blue-dark-bg);
 	color: var(--blue-fg);
 	overflow-y: scroll;
+	overflow-x: hidden;
 	box-shadow: inset 10px 0px 16px 0px var(--light-shadow);
 	padding-left: 0.5em;
 }
@@ -608,4 +609,36 @@ input[type="text"] {
 .rightFlexFloat {
 	flex-grow: 1;
 	text-align: right;
+}
+
+.tabButtons {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	padding: 0 0 1em 0;
+}
+
+.tabButtons .blockButton {
+	flex-grow: 1;
+	border-radius: 20px 20px 0 0;
+	margin: 0;
+}
+
+.tabButtons .disabled::after {
+	opacity: 0;
+}
+
+
+@keyframes height-anim {
+	0% {
+		max-height: 0;
+	}
+	100% {
+		max-height: 10em;
+	}
+}
+
+.list-elem {
+	animation-name: height-anim;
+	animation-duration: 1s;
 }

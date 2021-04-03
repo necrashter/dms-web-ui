@@ -4,6 +4,13 @@ const defaultHorizon = 30;
 
 const ACTION_OFFSET = 0;//-1;
 
+const TeamColors = d3.schemeCategory10;
+const TeamColorNames = [
+	"Blue", "Orange", "Green",
+	"Red", "Purple", "Brown",
+	"Pink", "Gray", "Yellow",
+	"Turquoise"
+];
 const TeamIcons = d3.schemeCategory10.map(color => {
 	const svgTemplate = `
 	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="marker">
@@ -109,18 +116,23 @@ class InteractivePolicy {
 	describeAction(actionNum = null) {
 		if(actionNum == null) actionNum =this.actionNum;
 		let header =  "Action #"+actionNum;
+		let energizationInfo = "";
+		let teamInfo = "";
+		let valueInfo = "";
 		if(actionNum == this.policy[this.state]) {
-			header += " <b>(Policy)</b>";
+			header += " (Policy)";
+		}
+		if(this.values) {
+			let value = this.values[this.state][actionNum];
+			valueInfo = `<span style="float:right;">${value.toFixed(3)}</span>`;
 		}
 		let action = this.actions[actionNum];
 		let currentState = this.states[this.state];
 		let nextState = this.states[action[0][0] + ACTION_OFFSET];
 		let energized = currentState.map((b, i) => b != nextState[i] ? i : null).filter(a => a != null);
-		let energizationInfo = "";
 		if(energized.length > 0) {
 			energizationInfo = "&emsp;Node(s): " + energized.join(", ") + "<br/>";
 		}
-		let teamInfo = "";
 		if(this.teams) {
 			let currentTeam = this.teams[this.state];
 			let nextTeam = this.teams[action[0][0] + ACTION_OFFSET];
@@ -138,6 +150,7 @@ class InteractivePolicy {
 		}
 		return `
 		<b>${header}</b><br/>
+		${valueInfo}
 		${energizationInfo}
 		${teamInfo}
 		`;
@@ -434,14 +447,13 @@ ${matrix}
 function loadPolicy(div, graph, policy, options={}) {
 	options.prelude = d => {
 		let ul = d.append("ul");
-		if(options.prioritized) {
+		if(options.priorities) {
 			ul.append("li").text("Prioritized nodes: ")
-			.append("ul").selectAll("li").data(options.prioritized).join("li")
+			.append("ul").selectAll("li").data(options.priorities).join("li")
 				.text((p,i) => 
-					"Class "+(i+1)+": "+
-					p.map(i => getNodeName(graph.nodes[i])).join(", ")
+					"Class "+(i+1)+"("+(p.maxmin ? "Maxmin" : "Minmin")+"): "+
+					p.nodes.map(i => getNodeName(graph.nodes[i])).join(", ")
 				);
-			ul.append("li").text("Prioritization Algorithm: " + options.algo);
 		} else {
 			ul.append("li").text("No prioritization");
 		}
@@ -516,6 +528,401 @@ function getPolicy(div, graph) {
 	} else {
 		requestNewPolicy(div, graph);
 	}
+}
+
+
+function policySettings(div, graph){
+	div.html("");
+	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
+	let errorDiv = div.append("p").text("")
+		.style("color", "red");
+	let tabNames = ["General", "Teams", "Prioritization"];
+	let tabButtonsDiv = div.append("div").classed("tabButtons", true);
+	let tabs = [
+		div.append("div"),
+		div.append("div").style("display", "none"),
+		div.append("div").style("display", "none"),
+	];
+	let selectedTab;
+	function selectTab(index) {
+		if(selectedTab == index) return;
+		selectedTab = index;
+		tabButtons.each(function(d, i) {
+			if (i == index) {
+				tabs[i].style("display", "");
+				d3.select(this).classed("disabled", true);
+			} else {
+				tabs[i].style("display", "none");
+				d3.select(this).classed("disabled", false);
+			}
+		});
+	}
+	let tabButtons = tabButtonsDiv.selectAll("div")
+		.data(tabNames).join("div").classed("blockButton", true)
+		.text(t => t)
+		.on("click", (text, index) => {
+			selectTab(index);
+		});
+	selectTab(0);
+
+	// GENERAL
+	let horizon = createTextInput(tabs[0], "Horizon", defaultHorizon);
+
+	// TEAMS
+	let teams = [];
+	let teamTypeNames = ["Instant", "Continuous", "Discrete"];
+	let selectedTeamType = 2;
+	let selectedTeam = -1;
+	let teamButtons = tabs[1].append("div").classed("policyControls", true);
+	let teamDiv = tabs[1].append("div");
+	teamButtons.append("div").classed("blockButton", true)
+		.text("Add")
+		.on("click", () => {
+			if(teams.length == 10) {
+				return;
+			}
+			let pos = Map.getCenter();
+			teams.push({
+				latlng: [
+					pos.lat - 0.025 + 0.05 * Math.random(),
+					pos.lng - 0.025 + 0.05 * Math.random(),
+				]
+			});
+			selectTeam(null, teams.length - 1);
+		});
+	teamButtons.append("div").classed("blockButton", true)
+		.text("Delete")
+		.on("click", () => {
+			teams.splice(selectedTeam, 1);
+			teamDiv.selectAll(".list-elem.selected")
+				.style("max-height", 0)
+				.style("padding", 0)
+				.transition().duration(500)
+				.style('opacity', 0)
+				.style('transform', "translateX(80%)")
+				.on('end', function() {
+					d3.select(this).remove();
+					selectTeam(null, Math.min(selectedTeam, teams.length - 1));
+				});
+		});
+	let teamTypeSelector;
+	{
+		teamTypeSelector = teamButtons.append("div").attr("class","CustomSelect")
+			.style("flex-grow", 1);
+		let innerDiv;
+		let teamTypeHead = teamTypeSelector.append("div")
+			.attr("class", "CustomSelectHead")
+			.text(teamTypeNames[selectedTeamType])
+			.on("click", function(_) {
+				innerDiv.classList.toggle("open");
+			});
+		const ul = teamTypeSelector.append("div").attr("class", "CustomSelectList").append("div");
+		innerDiv = ul.node();
+		ul.selectAll("div")
+			.data(teamTypeNames).join("div")
+			.attr("class", "CustomSelectElement")
+			.text(name => name)
+			.on("click", (name, i) => {
+				teamTypeHead.text(name);
+				selectedTeamType = i;
+				innerDiv.classList.remove("open");
+			});
+	}
+	function selectTeam(_, i) {
+		selectedTeam = i;
+		renderTeams();
+		createTeamMarkers();
+	}
+	function renderTeamInfo(d, i) {
+		let item = d3.select(this);
+		item.classed("selected", i == selectedTeam);
+		item.select(".item-header").text("Team #" + (i+1));
+		item.select(".item-info").text(d.latlng.map(a => a.toFixed(4)).join(", "));
+		item.select(".rightFlexFloat").text(TeamColorNames[i]);
+	}
+	function renderTeams() {
+		if(teams.length > 0) {
+			teamDiv.classed("selectList", true).classed("wide", true);
+			teamDiv.selectAll("h4").remove();
+			teamTypeSelector.style("display", "");
+			teamDiv.selectAll(".list-elem")
+				.data(teams)
+				.join(
+					function(enter) {
+						let item = enter.append("div")
+							.classed("list-elem", true)
+							.style("opacity", 0)
+							.style("max-height", "10em")
+							.style("transition", "max-height 0.5s, padding 0.5s")
+						let left = item.append("div");
+						left.append("b").classed("item-header", true);
+						left.append("div").classed("item-info", true);
+						item.append("div").classed("rightFlexFloat", true);
+						return item;
+					},
+					function(update) {
+						return update;
+					},
+					function(exit) {
+						return exit
+							.transition().duration(500)
+							.style('opacity', 0)
+							.style('transform', "translateX(80%)")
+							.on('end', function() {
+								d3.select(this).remove();
+							});
+					}
+				)
+				.each(renderTeamInfo)
+				.on("click", selectTeam)
+				.transition().duration(500)
+				.style("opacity", 1)
+		} else {
+			teamDiv.classed("selectList", false).classed("wide", false);
+			teamDiv.html("").append("h4").text("No Teams");
+			teamTypeSelector.style("display", "None");
+		}
+	}
+	let teamMarkers = null;
+	let teamMarkerLayer = null;
+	let createTeamMarkers = () => {
+		if(teamMarkerLayer) teamMarkerLayer.remove();
+		if(selectedTeam < 0) return;
+		teamMarkers = teams.map((team, i) => {
+			let color = TeamColors[i];
+			let m = L.marker(team.latlng, {
+				icon: TeamIcons[i],
+				color: color,
+				pane: "teams",
+			});
+			m.on("click", () => selectTeam(team, i));
+			return m;
+		});
+		teamMarkerLayer = L.layerGroup(teamMarkers);
+		teamMarkerLayer.addTo(Map);
+	};
+	selectTeam(null, -1);
+
+	// PRIORITY
+	let priorityClasses = [];
+	// ids of the prioritized node
+	let priorities = {};
+	let selectedPriorityClass = -1;
+	let priorityButtons = tabs[2].append("div").classed("policyControls", true);
+	let priorityClassDiv = tabs[2].append("div");
+	let nodeListWrapper = tabs[2].append("div");
+	let nodeListButtons = nodeListWrapper.append("div").classed("policyControls", true);
+	let nodeList = nodeListWrapper.append("div").classed("selectList", true);
+	priorityButtons.append("div").classed("blockButton", true)
+		.text("Add")
+		.on("click", () => {
+			priorityClasses.push({
+				nodes: new Set(),
+				maxmin: true,
+			});
+			selectPriorityClass(null, priorityClasses.length - 1);
+		});
+	priorityButtons.append("div").classed("blockButton", true)
+		.text("Delete")
+		.on("click", () => {
+			priorityClasses.splice(selectedPriorityClass, 1);
+			priorityClassDiv.selectAll(".list-elem.selected")
+				.style("max-height", 0)
+				.style("padding", 0)
+				.transition().duration(500)
+				.style('opacity', 0)
+				.style('transform', "translateX(80%)")
+				.on('end', function() {
+					d3.select(this).remove();
+					selectPriorityClass(null, Math.min(selectedPriorityClass, priorityClasses.length - 1));
+				});
+		});
+	priorityButtons.append("div").classed("blockButton", true)
+		.text("Change Type")
+		.on("click", () => {
+			if(selectedPriorityClass < 0) return;
+			priorityClasses[selectedPriorityClass].maxmin = !priorityClasses[selectedPriorityClass].maxmin;
+			renderPriorityClasses();
+		});
+	function selectPriorityClass(_, i) {
+		selectedPriorityClass = i;
+		renderPriorityClasses();
+		createNodeMarkers();
+	}
+	function renderPriorityClass(d, i) {
+		let item = d3.select(this);
+		item.classed("selected", i == selectedPriorityClass);
+		item.select(".item-header").text("Priority Class #" + (i+1));
+		item.select(".item-info").text("Nodes: " + (d.nodes.size > 0 ? [...d.nodes].join(", ") : "None"));
+		item.select(".rightFlexFloat").text(d.maxmin ? "MinMax" : "MinMin");
+	}
+	function renderPriorityClasses() {
+		if(priorityClasses.length > 0) {
+			priorityClassDiv.classed("selectList", true).classed("wide", true);
+			priorityClassDiv.selectAll("h4").remove();
+			priorityClassDiv.selectAll(".list-elem")
+				.data(priorityClasses)
+				.join(
+					function(enter) {
+						let item = enter.append("div")
+							.classed("list-elem", true)
+							.style("opacity", 0)
+							.style("max-height", "10em")
+							.style("transition", "max-height 0.5s, padding 0.5s")
+						let left = item.append("div");
+						left.append("b").classed("item-header", true);
+						left.append("div").classed("item-info", true);
+						item.append("div").classed("rightFlexFloat", true);
+						return item;
+					},
+					function(update) {
+						return update;
+					},
+					function(exit) {
+						return exit
+							.transition().duration(500)
+							.style('opacity', 0)
+							.style('transform', "translateX(80%)")
+							.on('end', function() {
+								d3.select(this).remove();
+							});
+					}
+				)
+				.each(renderPriorityClass)
+				.on("click", selectPriorityClass)
+				.transition().duration(500)
+				.style("opacity", 1)
+			nodeListWrapper.style("display", "");
+		} else {
+			priorityClassDiv.classed("selectList", false).classed("wide", false);
+			priorityClassDiv.html("").append("h4").text("No Priorities");
+			nodeListWrapper.style("display", "None");
+		}
+	}
+	nodeListButtons.append("div").classed("blockButton", true)
+		.text("Select All")
+		.on("click", () => {
+			if(selectedPriorityClass < 0) return;
+			priorityClasses[selectedPriorityClass].nodes.clear();
+			for(let i = 0; i < graph.nodes.length; ++i) {
+				priorityClasses[selectedPriorityClass].nodes.add(i);
+			}
+			renderNodeList();
+			renderPriorityClasses();
+			createNodeMarkers();
+		});
+	nodeListButtons.append("div").classed("blockButton", true)
+		.text("Unselect All")
+		.on("click", () => {
+			if(selectedPriorityClass < 0) return;
+			priorityClasses[selectedPriorityClass].nodes.clear();
+			renderNodeList();
+			renderPriorityClasses();
+			createNodeMarkers();
+		});
+	let nodeListItems = nodeList.selectAll("div")
+		.data(graph.nodes).join("div")
+		.text((_, i) => "Node #"+i)
+		.on("click", selectNode)
+		.on("mouseover", (_, i) => {
+			let icon = nodeMarkers[i]._icon;
+			if(icon) icon.children[0].classList.add("hover");
+		})
+		.on("mouseout", (_, i) => {
+			let icon = nodeMarkers[i]._icon;
+			if(icon) icon.children[0].classList.remove("hover");
+		});
+	function selectNode(d, i) {
+		if(selectedPriorityClass < 0) return;
+		if(priorityClasses[selectedPriorityClass].nodes.has(i)) {
+			priorityClasses[selectedPriorityClass].nodes.delete(i);
+		} else {
+			priorityClasses[selectedPriorityClass].nodes.add(i);
+		}
+		renderNodeList();
+		renderPriorityClasses();
+		createNodeMarkers();
+	}
+	function renderNodeList() {
+		let nodes = priorityClasses[selectedPriorityClass].nodes;
+		nodeListItems.attr("class", (_, i) => {
+			if(nodes.has(i)) return "currentIndex";
+			else return "";
+		});
+	}
+	let nodeMarkers = null;
+	let nodeMarkerLayer = null;
+	let createNodeMarkers = () => {
+		if(nodeMarkerLayer) nodeMarkerLayer.remove();
+		if(selectedPriorityClass < 0) return;
+		nodeMarkers = graph.nodes.map((node, i) => {
+			let pri = priorityClasses[selectedPriorityClass].nodes.has(i);
+			let m = L.marker(node.latlng, {
+				icon: getDescriptionIcon(
+					"#"+i,//+" "+(pri > 0 ? "<b>["+pri+"]</b>" : ""),
+					pri),
+				pane: "resources",
+			});
+			m.on("click", () => selectNode(node, i));
+			return m;
+		});
+		nodeMarkerLayer = L.layerGroup(nodeMarkers);
+		nodeMarkerLayer.addTo(Map);
+	};
+	selectPriorityClass(null, -1);
+
+	graph.contextMenuListener = (event, menu) => {
+		if(teams.length < 10) {
+			menu.append("div").text("Add Team Here")
+				.on("click", () => {
+					selectTab(1);
+					teams.push({
+						latlng: [event.latlng.lat, event.latlng.lng]
+					});
+					selectTeam(null, teams.length - 1);
+				})
+		}
+		if(selectedTeam >= 0) {
+			menu.append("div").text("Move Team Here")
+				.on("click", () => {
+					teams[selectedTeam].latlng = [event.latlng.lat, event.latlng.lng];
+					selectTeam(null, selectedTeam);
+				})
+		}
+	};
+
+	cleanUp = () => {
+		if(nodeMarkerLayer) nodeMarkerLayer.remove();
+		if(teamMarkerLayer) teamMarkerLayer.remove();
+		graph.contextMenuListener = null;
+	}
+	div.append("div").classed("blockButton", true)
+		.text("Generate Policy")
+		.on("click", () => {
+			horizonValue = parseInt(horizon.property("value"));
+			if(isNaN(horizonValue)) {
+				errorDiv.text("Invalid horizon");
+				return;
+			}
+			cleanUp();
+			let request = {
+				policyConfig: {
+					horizon: horizonValue,
+				}
+			};
+			request.priorities = priorityClasses.filter(a => a.nodes.size > 0).map(a => {
+				return {
+					nodes: [...a.nodes],
+					maxmin: a.maxmin
+				};
+			});
+			if(teams.length > 0) {
+				request.teams = teams;
+				request.teamType = selectedTeamType;
+			}
+			console.log("Request:", request);
+			requestNewPolicy(div, graph, request);
+		});
 }
 
 function selectPrioritizedNode(div, graph){
@@ -672,6 +1079,8 @@ function selectPolicyOptions(div, graph){
 function selectPolicyView(div, graph) {
 	graph.emptyState();
 	graph.rerender();
+	policySettings(div, graph);
+	return;
 
 	function createTrivialPolicy() {
 		//this.infoText = "A trivial policy has been generated.";
@@ -688,6 +1097,11 @@ function selectPolicyView(div, graph) {
 		.text("Prioritize")
 		.on("click", () => {
 			selectPrioritizedNode(div, graph);
+		});
+	div.append("div").classed("blockButton", true)
+		.text("New UI")
+		.on("click", () => {
+			policySettings(div, graph);
 		});
 	div.append("p")
 		.text(`Deprecated buttons`);
@@ -713,8 +1127,8 @@ class InteractivePolicyView {
 		this.options = options;
 		Object.assign(this, options);
 		this.teamMarkers = [];
-		this.policyNavigator();
 		this.infoEnabled = true;
+		this.policyNavigator();
 	}
 	setNext(i) {
 		this.policy.setNext(i);
@@ -736,7 +1150,7 @@ class InteractivePolicyView {
 	}
 
 	renderTeam(i, currentTeam, nextTeam) {
-		let color = d3.schemeCategory10[i];
+		let color = TeamColors[i];
 		let node = this.policy.teamNodes[currentTeam.node];
 		let nextNode = null;
 		let position = node;
@@ -773,7 +1187,7 @@ class InteractivePolicyView {
 			});
 			let deco = L.polylineDecorator( line, {
 				patterns: [
-					{offset: 60, repeat: 60, symbol: L.Symbol.arrowHead({
+					{offset: 20, repeat: 60, symbol: L.Symbol.arrowHead({
 						pixelSize: 20,
 						pathOptions: {
 							color: color, fillOpacity: 1, weight: 0,
