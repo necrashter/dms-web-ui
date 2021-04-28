@@ -1283,6 +1283,9 @@ class InteractivePolicyView {
 		}
 		infoList.append("li")
 			.text("State/States: "+this.policy.state+" / "+this.policy.states.length);
+		if(this.policy.values) {
+			infoList.append("li").text("Value: "+Math.min(...Object.values(this.policy.values[0])));
+		}
 		if(this.policy.times) {
 			let time = this.policy.times[this.policy.state];
 			infoList.append("li").text("Time: "+time);
