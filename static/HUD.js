@@ -116,59 +116,8 @@ function addSpinnerDiv(div) {
 
 
 
-function AdvancedCopy(theText){
-     //create our hidden div element
-     var hiddenCopy = document.createElement('div');
-     //set the innerHTML of the div
-     hiddenCopy.innerText = theText;
-     //set the position to be absolute and off the screen
-     hiddenCopy.style.position = 'absolute';
-     hiddenCopy.style.left = '-9999px';
- 
-     //check and see if the user had a text selection range
-     var currentRange;
-     if(document.getSelection().rangeCount > 0)
-     {
-          //the user has a text selection range, store it
-          currentRange = document.getSelection().getRangeAt(0);
-          //remove the current selection
-          window.getSelection().removeRange(currentRange);
-     }
-     else
-     {
-          //they didn't have anything selected
-          currentRange = false;
-     }
- 
-     //append the div to the body
-     document.body.appendChild(hiddenCopy);
-     //create a selection range
-     var CopyRange = document.createRange();
-     //set the copy range to be the hidden div
-     CopyRange.selectNode(hiddenCopy);
-     //add the copy range
-     window.getSelection().addRange(CopyRange);
- 
-     //since not all browsers support this, use a try block
-     try
-     {
-          //copy the text
-          document.execCommand('copy');
-     }
-     catch(err)
-     {
-          window.alert("Your Browser Doesn't support this! Error : " + err);
-     }
-     //remove the selection range (Chrome throws a warning if we don't.)
-     window.getSelection().removeRange(CopyRange);
-     //remove the hidden div
-     document.body.removeChild(hiddenCopy);
- 
-     //return the old selection range
-     if(currentRange)
-     {
-          window.getSelection().addRange(currentRange);
-     }
+function AdvancedCopy(text){
+	navigator.clipboard.writeText(text);
 }
 
 function getGraphDiagram() {
@@ -233,4 +182,38 @@ function krink() {
 	krinkOut=output;
 	return output;
 	*/
+}
+
+
+function copyBenchmarkTableMd() {
+	let benchmark = policyView.policy.benchmark;
+	if (!benchmark) {
+		console.error("No benchmark data available!");
+		return;
+	}
+	header = {
+		name: "Optimizations",
+		elapsed: "Elapsed Time",
+		states: "States",
+		value: "Value",
+	};
+	cols = Object.keys(header);
+	lens = {};
+	for (let key in header) {
+		lens[key] = header[key].length;
+	}
+	for (let b of benchmark) {
+		for (let key in lens) {
+			lens[key] = Math.max(lens[key], b[key].toString().length);
+		}
+	}
+	console.log(lens);
+	let lines = [];
+	lines.push(`| ${header.name.padEnd(lens.name)} | ${header.elapsed.padEnd(lens.elapsed)} | ${header.states.padEnd(lens.states)} | ${header.value.padEnd(lens.value)} |`);
+	lines.push(`|${'-'.repeat(2+lens.name)}|${'-'.repeat(2+lens.elapsed)}|${'-'.repeat(2+lens.states)}|${'-'.repeat(2+lens.value)}|`);
+	for (let b of benchmark) {
+		lines.push(`| ${b.name.toString().padEnd(lens.name)} | ${b.elapsed.toString().padEnd(lens.elapsed)} | ${b.states.toString().padEnd(lens.states)} | ${b.value.toString().padEnd(lens.value)} |`);
+	}
+	let s = lines.join('\n');
+	AdvancedCopy(s);
 }

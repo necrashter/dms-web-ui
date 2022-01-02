@@ -595,6 +595,10 @@ function policySettings(div, graph){
 
 	// GENERAL
 	let horizon = createTextInput(tabs[0], "Horizon", defaultHorizon);
+	let benchmark_enabled = false;
+	createCheckbox(tabs[0], "Benchmark", val => {
+		benchmark_enabled = val;
+	});
 
 	// TEAMS
 	let teams = [];
@@ -954,6 +958,7 @@ function policySettings(div, graph){
 				request.teams = teams;
 				request.teamType = selectedTeamType;
 			}
+			request.benchmark = benchmark_enabled;
 			console.log("Request:", request);
 			requestNewPolicy(div, graph, request);
 		});
