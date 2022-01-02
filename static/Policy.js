@@ -48,6 +48,15 @@ function getDescriptionIcon(str, neg=false) {
 	});
 }
 
+function getNodeDescriptionIcon(str, classname, customStyle="") {
+	return L.divIcon({
+		className: 'divIcon',
+		html: `<div class='${classname}' style='${customStyle}'>${str}</div>`,
+		iconSize: [200, 200],
+		iconAnchor: [100, 100]
+	});
+}
+
 
 class InteractivePolicy {
 	/**
@@ -489,7 +498,10 @@ function requestPolicy(graph, settings) {
 	return Network.post("/policy", JSON.stringify(request));
 }
 
+var lastRequestedPolicy = null;
+
 function requestNewPolicy(div, graph, settings={}) {
+	lastRequestedPolicy = [div, graph, settings];
 	console.log("requesting new policy...");
 	div.html("");
 	addSpinnerDiv(div).append("p").text("Waiting response from server...");
@@ -502,6 +514,9 @@ function requestNewPolicy(div, graph, settings={}) {
 			.style("color","red");
 		div.append("p").text(error)
 			.style("color","red");
+		div.append("div").classed("blockButton", true)
+			.text("Retry")
+			.on("click", () => requestNewPolicy(...lastRequestedPolicy));
 		div.append("div").classed("blockButton", true)
 			.text("Go Back")
 			.on("click", () => selectPolicyView(div, graph));
@@ -923,6 +938,13 @@ function policySettings(div, graph){
 			console.log("Request:", request);
 			requestNewPolicy(div, graph, request);
 		});
+	if (lastRequestedPolicy) {
+		div.append("div").classed("blockButton", true)
+			.text("Re-request Last")
+			.on("click", () => {
+				requestNewPolicy(...lastRequestedPolicy);
+			});
+	}
 }
 
 function selectPrioritizedNode(div, graph){
@@ -1155,7 +1177,7 @@ class InteractivePolicyView {
 		let nextNode = null;
 		let position = node;
 		let info = [];
-		if(currentTeam.target) {
+		if(currentTeam.target != null) {
 			nextNode = this.policy.teamNodes[currentTeam.target];
 			let percent = currentTeam.time / currentTeam.travelTime;
 			position = [
@@ -1168,7 +1190,7 @@ class InteractivePolicyView {
 			info.push("Moving to #" + currentTeam.target + ", "+
 				(currentTeam.travelTime-currentTeam.time) +" seconds remaining.");
 		} else if(nextTeam) {
-			let nextNodeId = nextTeam.target ? nextTeam.target : nextTeam.node;
+			let nextNodeId = nextTeam.target != null ? nextTeam.target : nextTeam.node;
 			nextNode = this.policy.teamNodes[nextNodeId];
 			if(currentTeam.node < this.graph.nodes.length) {
 				info.push("Currently at node #" + currentTeam.node);
@@ -1177,7 +1199,7 @@ class InteractivePolicyView {
 		} else if(currentTeam.node < this.graph.nodes.length) {
 			info.push("Currently at node #" + currentTeam.node);
 		}
-		if(nextNode != null) {
+		if(Settings.renderTeamArrows && nextNode != null) {
 			let line = L.polyline([node, nextNode], {
 				color: color,
 				dashArray: "10, 10",
@@ -1187,7 +1209,7 @@ class InteractivePolicyView {
 			});
 			let deco = L.polylineDecorator( line, {
 				patterns: [
-					{offset: 20, repeat: 60, symbol: L.Symbol.arrowHead({
+					{offset: 30, repeat: 30, symbol: L.Symbol.arrowHead({
 						pixelSize: 20,
 						pathOptions: {
 							color: color, fillOpacity: 1, weight: 0,
@@ -1239,17 +1261,19 @@ class InteractivePolicyView {
 			this.markerLayer.addTo(Map);
 			return;
 		}
-		let currentState = this.policy.getCurrentState();
-		let nextState = this.policy.getNextState();
-		for(let i=0; i<currentState.length; ++i) {
-			if(currentState[i] != nextState[i]) {
-				let node = this.graph.nodes[i];
-				let desc = nextState[i];
-				let m = L.marker(node.latlng, {
-					icon: getDescriptionIcon("#"+i+" "+desc, node.status < 0),
-					pane: "resources",
-				});
-				this.markers.push(m);
+		if(Settings.renderNextStateInfo) {
+			let currentState = this.policy.getCurrentState();
+			let nextState = this.policy.getNextState();
+			for(let i=0; i<currentState.length; ++i) {
+				if(currentState[i] != nextState[i]) {
+					let node = this.graph.nodes[i];
+					let desc = nextState[i];
+					let m = L.marker(node.latlng, {
+						icon: getDescriptionIcon("#"+i+" "+desc, node.status < 0),
+						pane: "resources",
+					});
+					this.markers.push(m);
+				}
 			}
 		}
 		if(this.policy.teams) {

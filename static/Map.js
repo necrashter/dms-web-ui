@@ -4,6 +4,11 @@ var Settings = {
 	colorized: true,
 	colorizationTarget: "pf",
 	nodeName: "id", // "name", "id"
+	renderTeamArrows: true,
+	renderNextStateInfo: false,
+	renderNodeInfoOnMap: true,
+	renderNextState: true,
+	nopf: false,
 }
 
 const Map = L.map('map', {
@@ -14,6 +19,10 @@ const Map = L.map('map', {
 	{ lat: 41.059420776730676, lng: 29.068107604980472 },
 	11
 );
+
+const NoMap = L.tileLayer('https://telemediabroadcasting.com/wp-content/uploads/2016/03/WhiteBackground.jpg', {
+	maxZoom: 19,
+});
 
 const OpenStreetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 	maxZoom: 19,
@@ -36,11 +45,11 @@ const StamenTonerLite = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/t
 	ext: 'png'
 });
 
-// TODO: switching
 var baseMaps = {
 	"OpenStreetMap": OpenStreetMap,
 	"StamenTerrain": StamenTerrain,
 	"StamenTonerLite": StamenTonerLite,
+	"Nomap": NoMap,
 };
 var selectedBaseMap = null;
 
@@ -52,7 +61,8 @@ function selectMap(name) {
 	selectedBaseMap = name;
 }
 
-selectMap("StamenTerrain");
+// selectMap("StamenTerrain");
+selectMap("Nomap");
 var TopRightPanel = document.getElementById("TopRightPanel");
 
 

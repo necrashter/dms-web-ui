@@ -9,13 +9,17 @@
 	animation-name: fadeIn;
 	animation-duration: 0.4s;
 	*/
+	display: flex !important;
+	justify-content: center;
+	align-content: center;
+	flex-direction: column;
 }
 
 .markerDiv {
 	width: 100%;
 	height: 100%;
 	border-radius: 100%;
-	background: var(--marker-bg);
+	background: #31f500; /*var(--marker-bg);*/
 	transition: transform 0.25s;
 }
 
@@ -112,3 +116,17 @@ filter: brightness(80%);
 	color: var(--orange-fg);
 }
 
+.nodeInfoWrapper {
+	display: flex;
+	justify-content: center;
+	align-content: center;
+}
+
+.nodeInfoMarker {
+    background: none;
+    text-align: center;
+    font-size: 1.4em;
+    font-family: serif;
+    transform: translate(0%, 100%);
+    line-height: 1em;
+}

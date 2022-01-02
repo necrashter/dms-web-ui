@@ -89,6 +89,18 @@ function createArrowDecorator(line, nodeStatus=1) {
 	});
 }
 
+function getNodeMarker(node, i) {
+		return L.marker(node.latlng, {
+			icon: L.divIcon({
+				className: 'divIcon',
+				html: `<div style="border-radius: 100%; width: 100%; height: 100%; background: white; color: black; font-family: serif; font-size: 1.5em; border: 2px solid black; text-align: center; display: flex; align-content: center; justify-content: center;">${i+1}</div>`,
+				iconSize: [30,30],
+				iconAnchor: [15,15]
+			}),
+			pane: "nodes"
+		});
+}
+
 var NodeNaming = {
 	name: function(node) {
 		return node.name ? node.name : "Node #"+node.index;
@@ -575,6 +587,7 @@ class Graph {
 			let route = branch.nodes.map(j => this.nodes[j].latlng);
 			let line;
 			let energized = branch.energized;
+			if (!Settings.renderNextState && energized == 2) energized = 0;
 				//this.nodes[branch.nodes[0]].status > 0 &&
 				//	this.nodes[branch.nodes[1]].status > 0;
 			if (energized) {
@@ -627,13 +640,15 @@ class Graph {
 		for(var i = 0; i<this.nodes.length; ++i) {
 			let node = this.nodes[i];
 			let latlng = node.latlng;
-			let color;
+			let color = pfInterpolator(node[Settings.colorizationTarget]);
 			if(node.status>0) {
-				color = (node.status == 2) ? Colors.action : Colors.energized;
+				if(node.status == 2) {
+					if(Settings.renderNextState) color = Colors.action;
+				} else {
+					color = Colors.energized;
+				}
 			} else if(node.status<0) {
 				color = Colors.damaged;
-			} else {
-				color = pfInterpolator(node[Settings.colorizationTarget]);
 			}
 
 			//markers.push(L.marker(latlng, {icon: testIcon}));
@@ -655,6 +670,19 @@ class Graph {
 			circle.on("mouseout", this.nodeOnMouseOut.bind(this));
 			circle.on("click", this.nodeOnClick.bind(this));
 			circles.push(circle);
+			if(Settings.renderNodeInfoOnMap) {
+				let name = `<b>${i+1}</b>`;
+				let pfinfo = `<i>P<sub>f</sub></i>&nbsp; = ${node.pf}`;
+				let text = name + "<br/>" + (Settings.nopf ? "" : pfinfo);
+				let customStyle = Settings.nopf ? "padding: 0.1em;" : "";
+				customStyle += node.customLabelStyle ? node.customLabelStyle : "";
+				let m = L.marker(node.latlng, {
+					className: "divIcon",
+					icon: getNodeDescriptionIcon(text, "nodeInfoMarker", customStyle),
+					pane: "resources",
+				});
+				markers.push(m);
+			}
 		}
 		// add resources
 		for(var i = 0; i<this.resources.length; ++i) {
@@ -678,6 +706,7 @@ class Graph {
 		this.decoratorLayer = L.layerGroup(decorators);
 
 		this.map = map;
+		this.markerLayer.addTo(map);
 		this.decoratorLayer.addTo(map);
 		this.branchLayer.addTo(map);
 		this.externalBranchLayer.addTo(map);
