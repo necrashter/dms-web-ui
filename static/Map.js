@@ -3,7 +3,7 @@ var Settings = {
 	arrows: false,
 	colorized: true,
 	colorizationTarget: "pf",
-	nodeName: "id", // "name", "id"
+	nodeName: "index", // "name", "index", "index1"
 	renderTeamArrows: true,
 	renderNextStateInfo: false,
 	renderNodeInfoOnMap: true,
@@ -212,6 +212,8 @@ Map.createPane("nodes");
 Map.getPane('nodes').style.zIndex = 650;
 Map.createPane("branches");
 Map.getPane('branches').style.zIndex = 450;
+Map.createPane("nodeInfo");
+Map.getPane("nodeInfo").style.zIndex = 400;
 //Map.getPane('branches').style.pointerEvents = "none";
 
 

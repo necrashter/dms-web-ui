@@ -103,10 +103,13 @@ function getNodeMarker(node, i) {
 
 var NodeNaming = {
 	name: function(node) {
-		return node.name ? node.name : "Node #"+node.index;
+		return node.name ? node.name : "#"+node.index;
 	},
-	id: function(node) {
-		return node.index;
+	index: function(node) {
+		return "#"+node.index;
+	},
+	index1: function(node) {
+		return "#"+(node.index+1);
 	},
 };
 function getNodeName(node) {
@@ -574,6 +577,7 @@ class Graph {
 		var externalBranches = [];
 		var resourceMarkers = [];
 		var decorators = [];
+		var nodeInfos = [];
 		const branchMode = this.mode == 0 ? "branches" : "nodes";
 		let pfInterpolator;
 		if(Settings.colorized) 
@@ -651,7 +655,6 @@ class Graph {
 				color = Colors.damaged;
 			}
 
-			//markers.push(L.marker(latlng, {icon: testIcon}));
 			let circle = L.circleMarker(latlng, {
 				color: Colors.shadow,
 				fillColor: color,
@@ -671,7 +674,7 @@ class Graph {
 			circle.on("click", this.nodeOnClick.bind(this));
 			circles.push(circle);
 			if(Settings.renderNodeInfoOnMap) {
-				let name = `<b>${i+1}</b>`;
+				let name = `<b>${getNodeName(node)}</b>`;
 				let pfinfo = `<i>P<sub>f</sub></i>&nbsp; = ${node.pf}`;
 				let text = name + "<br/>" + (Settings.nopf ? "" : pfinfo);
 				let customStyle = Settings.nopf ? "padding: 0.1em;" : "";
@@ -679,9 +682,9 @@ class Graph {
 				let m = L.marker(node.latlng, {
 					className: "divIcon",
 					icon: getNodeDescriptionIcon(text, "nodeInfoMarker", customStyle),
-					pane: "resources",
+					pane: "nodeInfo",
 				});
-				markers.push(m);
+				nodeInfos.push(m);
 			}
 		}
 		// add resources
@@ -706,6 +709,10 @@ class Graph {
 		this.decoratorLayer = L.layerGroup(decorators);
 
 		this.map = map;
+		if (nodeInfos) {
+			this.nodeInfoLayer = L.layerGroup(nodeInfos);
+			this.nodeInfoLayer.addTo(map);
+		}
 		this.markerLayer.addTo(map);
 		this.decoratorLayer.addTo(map);
 		this.branchLayer.addTo(map);
@@ -968,6 +975,10 @@ class Graph {
 		}
 	}
 	clear() {
+		if(this.nodeInfoLayer) {
+			this.nodeInfoLayer.clearLayers();
+			this.nodeInfoLayer.remove();
+		}
 		if(this.decoratorLayer) {
 			this.decoratorLayer.clearLayers();
 			this.decoratorLayer.remove();

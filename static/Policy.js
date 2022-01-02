@@ -57,6 +57,19 @@ function getNodeDescriptionIcon(str, classname, customStyle="") {
 	});
 }
 
+/**
+ * Get team struct for creating a team under the mouse cursor.
+ * Creates on bus if possible, otherwise creates based on latlng.
+ */
+function getMouseTeam(event) {
+	let team = { latlng: [event.latlng.lat, event.latlng.lng] };
+	let lastHover = graph.lastHover;
+	if (lastHover.hovered && lastHover.type === "node") {
+		team.index = lastHover.data.index;
+	}
+	return team;
+}
+
 
 class InteractivePolicy {
 	/**
@@ -652,7 +665,13 @@ function policySettings(div, graph){
 		let item = d3.select(this);
 		item.classed("selected", i == selectedTeam);
 		item.select(".item-header").text("Team #" + (i+1));
-		item.select(".item-info").text(d.latlng.map(a => a.toFixed(4)).join(", "));
+		if ('index' in d) {
+			item.select(".item-info").text("On bus "+getNodeName(graph.nodes[d.index]));
+		} else if ('latlng' in d) {
+			item.select(".item-info").text(d.latlng.map(a => a.toFixed(4)).join(", "));
+		} else {
+			item.select(".item-info").text("TEAM STATE CORRUPT!");
+		}
 		item.select(".rightFlexFloat").text(TeamColorNames[i]);
 	}
 	function renderTeams() {
@@ -887,20 +906,20 @@ function policySettings(div, graph){
 	selectPriorityClass(null, -1);
 
 	graph.contextMenuListener = (event, menu) => {
+		// This must be the first command, because mouse state will change later
+		let newTeam = getMouseTeam(event);
 		if(teams.length < 10) {
 			menu.append("div").text("Add Team Here")
 				.on("click", () => {
 					selectTab(1);
-					teams.push({
-						latlng: [event.latlng.lat, event.latlng.lng]
-					});
+					teams.push(newTeam);
 					selectTeam(null, teams.length - 1);
 				})
 		}
 		if(selectedTeam >= 0) {
 			menu.append("div").text("Move Team Here")
 				.on("click", () => {
-					teams[selectedTeam].latlng = [event.latlng.lat, event.latlng.lng];
+					teams[selectedTeam] = newTeam;
 					selectTeam(null, selectedTeam);
 				})
 		}

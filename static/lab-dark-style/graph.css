@@ -116,11 +116,6 @@ filter: brightness(80%);
 	color: var(--orange-fg);
 }
 
-.nodeInfoWrapper {
-	display: flex;
-	justify-content: center;
-	align-content: center;
-}
 
 .nodeInfoMarker {
     background: none;
