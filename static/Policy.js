@@ -503,6 +503,44 @@ function loadPolicy(div, graph, policy, options={}) {
 		});
 }
 
+
+function requestSaveExp(graph, settings) {
+	let request = {
+		graph: graph.serialize(),
+	};
+	Object.assign(request, settings);
+	return Network.post("/saveExperiment", JSON.stringify(request));
+}
+
+/**
+ * Save the policy for an experiment.
+ */
+function saveAsExperiment(div, graph, settings) {
+	console.log("Requesting to save experiment...");
+	div.html("");
+	addSpinnerDiv(div).append("p").text("Waiting response from server...");
+	requestSaveExp(graph, settings).then(response => {
+		response = JSON.parse(response);
+		console.log("Response:", response);
+		div.resetDiv(settings.name);
+		if (response.successful) {
+			div.append("b").text("Successfully saved experiment as:");
+			div.append("p").text(settings.name);
+		} else {
+			div.append("b").text("Failed to save experiment!")
+				.style("color","red");
+			div.append("p").text(response.error)
+				.style("color","red");
+		}
+	}).catch(error => {
+		div.resetDiv(settings.name);
+		div.append("b").text("Failed to save experiment!")
+			.style("color","red");
+		div.append("p").html(error)
+			.style("color","red");
+	});
+}
+
 function requestPolicy(graph, settings) {
 	let request = {
 		graph: graph.serialize(),
@@ -934,33 +972,39 @@ function policySettings(div, graph){
 		if(teamMarkerLayer) teamMarkerLayer.remove();
 		graph.contextMenuListener = null;
 	}
+	function getCurrentRequest() {
+		horizonValue = parseInt(horizon.property("value"));
+		if(isNaN(horizonValue)) {
+			errorDiv.text("Invalid horizon");
+			return null;
+		}
+		let request = {
+			policyConfig: {
+				horizon: horizonValue,
+			}
+		};
+		request.priorities = priorityClasses.filter(a => a.nodes.size > 0).map(a => {
+			return {
+				nodes: [...a.nodes],
+				maxmin: a.maxmin
+			};
+		});
+		if(teams.length > 0) {
+			request.teams = teams;
+			request.teamType = selectedTeamType;
+		}
+		request.benchmark = benchmark_enabled;
+		return request;
+	}
 	div.append("div").classed("blockButton", true)
 		.text("Generate Policy")
 		.on("click", () => {
-			horizonValue = parseInt(horizon.property("value"));
-			if(isNaN(horizonValue)) {
-				errorDiv.text("Invalid horizon");
-				return;
-			}
-			cleanUp();
-			let request = {
-				policyConfig: {
-					horizon: horizonValue,
-				}
-			};
-			request.priorities = priorityClasses.filter(a => a.nodes.size > 0).map(a => {
-				return {
-					nodes: [...a.nodes],
-					maxmin: a.maxmin
-				};
-			});
-			if(teams.length > 0) {
-				request.teams = teams;
-				request.teamType = selectedTeamType;
-			}
-			request.benchmark = benchmark_enabled;
+			request = getCurrentRequest();
 			console.log("Request:", request);
-			requestNewPolicy(div, graph, request);
+			if (request) {
+				cleanUp();
+				requestNewPolicy(div, graph, request);
+			}
 		});
 	if (lastRequestedPolicy) {
 		div.append("div").classed("blockButton", true)
@@ -969,6 +1013,27 @@ function policySettings(div, graph){
 				requestNewPolicy(...lastRequestedPolicy);
 			});
 	}
+	let experimentDiv = div.append("div");
+	experimentDiv.resetDiv = (previousName) => {
+		if (!previousName) {
+			previousName = graph.name+" Exp";
+		}
+		experimentDiv.html("");
+		experimentDiv.append("hr");
+		experimentDiv.append("h3").text("Save this configuration");
+		let experimentName = createTextInput(experimentDiv, "Experiment Name", previousName);
+		experimentDiv.append("div").classed("blockButton", true)
+			.text("Save as Experiment")
+			.on("click", () => {
+				request = getCurrentRequest();
+				request.name = experimentName.property("value");
+				console.log("Save Request:", request);
+				if (request) {
+					saveAsExperiment(experimentDiv, graph, request);
+				}
+			});
+	};
+	experimentDiv.resetDiv();
 }
 
 function selectPrioritizedNode(div, graph){
