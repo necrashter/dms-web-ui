@@ -6,7 +6,7 @@ var Settings = {
 	nodeName: "index", // "name", "index", "index1"
 	renderTeamArrows: true,
 	renderNextStateInfo: false,
-	renderNodeInfoOnMap: true,
+	renderNodeInfoOnMap: false,
 	renderNextState: true,
 	nopf: false,
 }
