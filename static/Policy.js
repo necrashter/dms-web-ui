@@ -774,7 +774,7 @@ function policySettings(div, graph){
 			m.on("click", () => selectTeam(team, i));
 			return m;
 		});
-		teamMarkerLayer = L.layerGroup(teamMarkers);
+		teamMarkerLayer = L.featureGroup(teamMarkers);
 		teamMarkerLayer.addTo(Map);
 	};
 	selectTeam(null, -1);
@@ -942,7 +942,7 @@ function policySettings(div, graph){
 			m.on("click", () => selectNode(node, i));
 			return m;
 		});
-		nodeMarkerLayer = L.layerGroup(nodeMarkers);
+		nodeMarkerLayer = L.featureGroup(nodeMarkers);
 		nodeMarkerLayer.addTo(Map);
 	};
 	selectPriorityClass(null, -1);
@@ -1094,7 +1094,7 @@ function selectPrioritizedNode(div, graph){
 			m.on("click", () => selectFun(node, i));
 			return m;
 		});
-		markerLayer = L.layerGroup(markers);
+		markerLayer = L.featureGroup(markers);
 		markerLayer.addTo(Map);
 	};
 	let selectFun = (_, i) => {
@@ -1346,7 +1346,7 @@ class InteractivePolicyView {
 					this.renderTeam(i, currentTeam, null);
 				}
 			}
-			this.markerLayer = L.layerGroup(this.markers);
+			this.markerLayer = L.featureGroup(this.markers);
 			this.markerLayer.addTo(Map);
 			return;
 		}
@@ -1374,7 +1374,7 @@ class InteractivePolicyView {
 				this.renderTeam(i, currentTeam, nextTeam);
 			}
 		}
-		this.markerLayer = L.layerGroup(this.markers);
+		this.markerLayer = L.featureGroup(this.markers);
 		this.markerLayer.addTo(Map);
 	}
 	policyNavigator() {

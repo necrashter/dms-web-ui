@@ -3,12 +3,13 @@ var Settings = {
 	arrows: false,
 	colorized: true,
 	colorizationTarget: "pf",
-	nodeName: "index", // "name", "index", "index1"
+	nodeName: "index1", // "name", "index", "index1"
 	renderTeamArrows: true,
 	renderNextStateInfo: false,
-	renderNodeInfoOnMap: false,
+	renderNodeInfoOnMap: true,
 	renderNextState: true,
 	nopf: false,
+	screenshotPad: 0.125,
 }
 
 const Map = L.map('map', {
@@ -20,7 +21,7 @@ const Map = L.map('map', {
 	11
 );
 
-const NoMap = L.tileLayer('https://telemediabroadcasting.com/wp-content/uploads/2016/03/WhiteBackground.jpg', {
+const NoMap = L.tileLayer('assets/WhiteBackground.jpg', {
 	maxZoom: 19,
 });
 
@@ -274,3 +275,113 @@ function setMapTheme(name) {
 	}
 }
 // setMapTheme("Dark")
+
+
+////////////////////////////////////////////////////////////////////////
+//                            SCREEN SHOT                             //
+////////////////////////////////////////////////////////////////////////
+
+// L.simpleMapScreenshoter({
+//    cropImageByInnerWH: true, // crop blank opacity from image borders
+// }).addTo(Map);
+
+
+
+// Set up snapshotter
+const snapshotOptions = {
+  hideElementsWithSelectors: [
+    ".leaflet-control-container",
+    ".leaflet-dont-include-pane",
+    "#snapshot-button"
+  ],
+  hidden: true
+};
+
+// Add screenshotter to map
+const screenshotter = L.simpleMapScreenshoter(snapshotOptions);
+screenshotter.addTo(Map);
+
+function takeScreenshot() {
+	// Get bounds of features
+	let featureBounds = null;
+	Map.eachLayer(layer => {
+		if (layer instanceof L.FeatureGroup) {
+			if (featureBounds)
+				featureBounds.extend(layer.getBounds());
+			else
+				featureBounds = layer.getBounds();
+		}
+	});
+	if (featureBounds) {
+		// Add padding
+		featureBounds = featureBounds.pad(Settings.screenshotPad);
+	} else {
+		featureBounds = Map.getBounds();
+	}
+
+	// Get pixel position on screen of top left and bottom right
+	// of the bounds of the feature
+	const nw = featureBounds.getNorthWest();
+	const se = featureBounds.getSouthEast();
+	const topLeft = Map.latLngToContainerPoint(nw);
+	const bottomRight = Map.latLngToContainerPoint(se);
+
+	// Get the resulting image size that contains the feature
+	const imageSize = bottomRight.subtract(topLeft);
+
+	// Set up screenshot function
+	screenshotter
+		.takeScreen("image")
+		.then((image) => {
+			// Create <img> element to render img data
+			var img = new Image();
+
+			// once the image loads, do the following:
+			img.onload = () => {
+				// Create canvas to process image data
+				const canvas = document.createElement("canvas");
+				const ctx = canvas.getContext("2d");
+
+				// Set canvas size to the size of your resultant image
+				canvas.width = imageSize.x;
+				canvas.height = imageSize.y;
+
+				// Draw just the portion of the whole map image that contains
+				// your feature to the canvas
+				// from https://stackoverflow.com/questions/26015497/how-to-resize-then-crop-an-image-with-canvas
+				ctx.drawImage(
+					img,
+					topLeft.x,
+					topLeft.y,
+					imageSize.x,
+					imageSize.y,
+					0,
+					0,
+					imageSize.x,
+					imageSize.y
+				);
+
+				// Create URL for resultant png
+				var imageurl = canvas.toDataURL("image/png");
+				// console.log(imageurl);
+
+				const resultantImage = new Image();
+				resultantImage.style = "border: 1px solid black";
+				resultantImage.src = imageurl;
+
+				// document.body.appendChild(canvas);
+
+				canvas.toBlob(function (blob) {
+					// saveAs function installed as part of leaflet snapshot package
+					saveAs(blob, "screenshot.png");
+				});
+			};
+
+			// set the image source to what the snapshotter captured
+			// img.onload will fire AFTER this
+			img.src = image;
+		})
+		.catch((e) => {
+			alert(e.toString());
+		});
+};

@@ -701,24 +701,20 @@ class Graph {
 			marker.on("mouseout",  this.resourceOnMouseOut.bind(this));
 			resourceMarkers.push(marker);
 		}
-		this.markerLayer = L.layerGroup(markers);
-		this.resourceLayer = L.layerGroup(resourceMarkers);
-		this.circleLayer = L.layerGroup(circles);
-		this.branchLayer = L.layerGroup(branches);
-		this.externalBranchLayer = L.layerGroup(externalBranches);
-		this.decoratorLayer = L.layerGroup(decorators);
 
 		this.map = map;
-		if (nodeInfos) {
-			this.nodeInfoLayer = L.layerGroup(nodeInfos);
-			this.nodeInfoLayer.addTo(map);
-		}
+
+		let allMarkers = [].concat(
+			markers,
+			resourceMarkers,
+			circles,
+			branches,
+			externalBranches,
+			decorators,
+			nodeInfos
+		);
+		this.markerLayer = L.featureGroup(allMarkers);
 		this.markerLayer.addTo(map);
-		this.decoratorLayer.addTo(map);
-		this.branchLayer.addTo(map);
-		this.externalBranchLayer.addTo(map);
-		this.circleLayer.addTo(map);
-		this.resourceLayer.addTo(map);
 		this.blinkTimer = setTimeout(() => this.onBlink(), blinkTime);
 	}
 	onBlink(even=true) {
@@ -975,33 +971,9 @@ class Graph {
 		}
 	}
 	clear() {
-		if(this.nodeInfoLayer) {
-			this.nodeInfoLayer.clearLayers();
-			this.nodeInfoLayer.remove();
-		}
-		if(this.decoratorLayer) {
-			this.decoratorLayer.clearLayers();
-			this.decoratorLayer.remove();
-		}
 		if(this.markerLayer) {
 			this.markerLayer.clearLayers();
 			this.markerLayer.remove();
-		}
-		if(this.resourceLayer) {
-			this.resourceLayer.clearLayers();
-			this.resourceLayer.remove();
-		}
-		if(this.circleLayer) {
-			this.circleLayer.clearLayers();
-			this.circleLayer.remove();
-		}
-		if(this.branchLayer) {
-			this.branchLayer.clearLayers();
-			this.branchLayer.remove();
-		}
-		if(this.externalBranchLayer) {
-			this.externalBranchLayer.clearLayers();
-			this.externalBranchLayer.remove();
 		}
 	}
 	/**
