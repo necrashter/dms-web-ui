@@ -1144,15 +1144,19 @@ class Graph {
 							potentials.push(other);
 						}
 					}
-					diffs.push({
-						i: i,
-						potentials: potentials,
-					});
+					if (potentials.length > 0) {
+						diffs.push({
+							i: i,
+							potentials: potentials,
+						});
+					}
 					// TODO: handle cases where a bus gets energized from externalBranch
 					// but a neighboring bus gets energized from somewhere else
 					// Probably need to get sourceNames from server.
 					// Currently there's no mapping from sourceNames -> source IDs in the
 					// client side.
+					// TODO: Another limitation: When TG powers DER-powered buses,
+					// directions may change completely.
 				}
 			}
 
