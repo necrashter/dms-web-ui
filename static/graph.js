@@ -1077,31 +1077,41 @@ class Graph {
 						this.nodes[i].status = 2;
 			}
 		}
+	}
+	/**
+	 * Traverse graph breadth-first, starting from each
+	 * energy source (add enterance points to queue), figure out directions
+	 * as you go.
+	 */
+	_computeBranchDirections() {
+		let queue = [];
+		let oldNodes = new Set(); // constant time lookup
 		for(let externalBranch of this.externalBranches) {
-			let nodes = [externalBranch.node];
-			let oldNodes = new Set(); // constant time lookup
-			while(nodes.length > 0) {
-				let node = nodes.pop();
-				for(let b of this.nodes[node].branches) {
-					if(oldNodes.has(b.branch.nodes[0])) continue;
-					if(oldNodes.has(b.branch.nodes[1])) continue;
-					if(b.branch.nodes[0] == node) {
-						if(state[b.branch.nodes[1]] == state[node]) {
-							if(state[node] != "D" && state[node] != "U" &&
-								!nodes.includes(b.branch.nodes[1]))
-								b.branch.energized = b.branch.energized > 0 ? 1 : 2;
-							nodes.unshift(b.branch.nodes[1]);
-						}
-					} else if(state[b.branch.nodes[0]] == state[node]) {
+			queue.push(externalBranch.node);
+		}
+		while (queue.length > 0) {
+			let node = queue.shift();
+			for(let b of this.nodes[node].branches) {
+				if(oldNodes.has(b.branch.nodes[0])) continue;
+				if(oldNodes.has(b.branch.nodes[1])) continue;
+				if(b.branch.nodes[0] == node) {
+					if(state[b.branch.nodes[1]] == state[node]) {
 						if(state[node] != "D" && state[node] != "U" &&
-							!nodes.includes(b.branch.nodes[0]))
+								!queue.includes(b.branch.nodes[1])) {
 							b.branch.energized = b.branch.energized > 0 ? 1 : 2;
-						nodes.unshift(b.branch.nodes[0]);
+							queue.push(b.branch.nodes[1]);
+						}
+					}
+				} else if(state[b.branch.nodes[0]] == state[node]) {
+					if(state[node] != "D" && state[node] != "U" &&
+							!queue.includes(b.branch.nodes[0])) {
+						b.branch.energized = b.branch.energized > 0 ? 1 : 2;
+						queue.push(b.branch.nodes[0]);
 						b.branch.nodes.reverse();
 					}
 				}
-				oldNodes.add(node);
 			}
+			oldNodes.add(node);
 		}
 	}
 	emptyState() {
@@ -1112,9 +1122,70 @@ class Graph {
 	}
 	setState(hist) {
 		this.emptyState();
+
+		let lastState = null;
+		let lastEnergizedBranches;
 		for(let s of hist) {
 			this._setState(s);
+			if (lastState == null) {
+				lastState = s;
+				continue;
+			}
+			let diffs = [
+				// { i: index, potentials: [] }
+			];
+			for (let i = 0; i < s.length; ++i) {
+				if (lastState[i] != s[i] && s[i] != "D") {
+					let potentials = [];
+					for(let b of this.nodes[i].branches) {
+						let other = b.branch.nodes[0] == i ?
+								b.branch.nodes[1] : b.branch.nodes[0];
+						if (lastState[other] == s[i]) {
+							potentials.push(other);
+						}
+					}
+					diffs.push({
+						i: i,
+						potentials: potentials,
+					});
+					// TODO: handle cases where a bus gets energized from externalBranch
+					// but a neighboring bus gets energized from somewhere else
+					// Probably need to get sourceNames from server.
+					// Currently there's no mapping from sourceNames -> source IDs in the
+					// client side.
+				}
+			}
+
+			lastEnergizedBranches = [];
+			while (diffs.length > 0) {
+				let mindiff = 0;
+				for (let i = 1; i < diffs.length; ++i) {
+					if (diffs[i].potentials.length < diffs[mindiff].potentials.length) {
+						mindiff = i;
+					}
+				}
+				mindiff = diffs.splice(mindiff, 1)[0];
+				let source = mindiff.potentials[0];
+				let target = mindiff.i;
+				for(let b of this.nodes[target].branches) {
+					if (b.branch.nodes[0] == target && b.branch.nodes[1] == source) {
+						b.branch.nodes.reverse();
+						b.branch.energized = 1;
+						lastEnergizedBranches.push(b.branch);
+						break;
+					} else if (b.branch.nodes[0] == source && b.branch.nodes[1] == target) {
+						b.branch.energized = 1;
+						lastEnergizedBranches.push(b.branch);
+						break;
+					}
+				}
+			}
+			lastState = s;
 		}
+		for (let b of lastEnergizedBranches) {
+			b.energized = 2;
+		}
+
 		if(Settings.colorized && Settings.colorizationTarget === "cpf") {
 			this.calculateCumulativePfs();
 		}
