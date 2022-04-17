@@ -911,6 +911,7 @@ class Graph {
 						this.lastSelect = null;
 						return;
 					}
+					if (this.lastHover.type !== "node" && this.lastHover.type !== "resource") break;
 					if(this.lastSelect) {
 						if(this.lastSelect.data !== this.lastHover.data) {
 							if(this.lastSelect.type === "node") {
