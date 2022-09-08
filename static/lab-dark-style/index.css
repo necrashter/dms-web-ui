@@ -642,3 +642,7 @@ input[type="text"] {
 	animation-name: height-anim;
 	animation-duration: 1s;
 }
+
+summary {
+	cursor: pointer;
+}

@@ -14,7 +14,7 @@ function getGraphIcon(name) {
 
 
 var markers;
-function selectGraph(choices, prebody=null) {
+function selectGraph(dirlist, prebody=null) {
 	let markerLayer;
 	let content = d3.select("#RightPanelContent").html("");
 	content.style("opacity", 0);
@@ -28,6 +28,10 @@ function selectGraph(choices, prebody=null) {
 		// make sure that it runs only once
 		if(selected) return;
 		selected = true;
+		if (!d.load) {
+			// Define load function if not defined
+			d.load = () => loadGraphFromServer(d);
+		}
 		d.load().then(() => {
 			markerLayer.remove();
 			header.classed("disabled", true);
@@ -57,6 +61,8 @@ function selectGraph(choices, prebody=null) {
 			selectPolicyView(policyDiv, graph);
 		});
 	};
+	let choices = dirlist[''];
+	delete dirlist[''];
 	markers = choices.map((g,i) => {
 		let m = L.marker(g.view, {
 			icon: getGraphIcon(g.name),
@@ -83,6 +89,17 @@ function selectGraph(choices, prebody=null) {
 			let icon = markers[i]._icon;
 			if(icon) icon.children[0].classList.remove("hover");
 		});
+	if (Object.keys(dirlist).length > 0) {
+		body.append("h2").text("Other Directories");
+		for (let dir in dirlist) {
+			let container = body.append("details");
+			container.append("summary").text(dir);
+			let list = container.append("div").classed("selectList", true);
+			list.selectAll("div").data(dirlist[dir]).join("div")
+				.text(d => d.name)
+				.on("click", selectFun)
+		}
+	}
 	content.transition().duration(300).style("opacity", 1);
 	markerLayer.addTo(Map);
 }

@@ -6,7 +6,7 @@ var Settings = {
 	nodeName: "index1", // "name", "index", "index1"
 	renderTeamArrows: true,
 	renderNextStateInfo: false,
-	renderNodeInfoOnMap: true,
+	renderNodeInfoOnMap: false,
 	renderNextState: true,
 	nopf: false,
 	screenshotPad: 0.125,

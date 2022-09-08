@@ -223,20 +223,16 @@ function openSelectGraph() {
 	Network.get("/getGraphs").then(response => {
 		let fileList = JSON.parse(response);
 		console.log(fileList);
-		graphChoices = fileList.map(g => {
-			return {
-				name: g.name,
-				view: g.view,
-				load: () => loadGraphFromServer(g)
-			};
-		});
-		selectGraph(graphChoices);
+		selectGraph(fileList);
 	}).catch(error => {
-		selectGraph([
+		selectGraph({'': [
 			{name: "Test Graph",
 				view: fallbackGraph.view,
-				load: () => graph.loadGraph(fallbackGraph)}
-		], div => {
+				load: () => new Promise((resolve) => {
+					graph.loadGraph(fallbackGraph);
+					resolve();
+				})}
+		]}, div => {
 			div.append("p")
 				.text("Failed to get graph list from server: "+error.message)
 				.style("color", "red");
