@@ -186,6 +186,9 @@ class InteractivePolicy {
 				list += `<div>Node #${i}: ${nextState[i]}</div>`;
 			}
 		}
+		if (list == "") {
+			list = "Deterministic Transition";
+		}
 		//return `<div><b>Transition #${i}</b> <br/>`+this.states[action[0] - 1].toString()+"</div>";
 		return `
 			<div><b>Transition #${i}</b> <div>${list}</div> </div>
