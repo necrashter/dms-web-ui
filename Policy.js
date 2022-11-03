@@ -512,7 +512,7 @@ function requestSaveExp(graph, settings) {
 		graph: graph.serialize(),
 	};
 	Object.assign(request, settings);
-	return Network.post("/saveExperiment", JSON.stringify(request));
+	return Network.post("/save-experiment", JSON.stringify(request));
 }
 
 /**
@@ -1271,7 +1271,8 @@ class InteractivePolicyView {
 		let info = [];
 		if(currentTeam.target != null) {
 			nextNode = this.policy.teamNodes[currentTeam.target];
-			let percent = currentTeam.time / currentTeam.travelTime;
+      let travelTime = this.policy.travelTimes[currentTeam.node][currentTeam.target];
+			let percent = currentTeam.time / travelTime;
 			position = [
 				node[0]*(1-percent) + nextNode[0]*percent,
 				node[1]*(1-percent) + nextNode[1]*percent
@@ -1394,8 +1395,14 @@ class InteractivePolicyView {
 		let infoDiv = this.div.append("div");
 		if(this.prelude) this.prelude(infoDiv);
 		let infoList = infoDiv.append("ul");
-		if(this.policy.duration) {
-			infoList.append("li").text("Elapsed time: "+this.policy.duration);
+		if(this.policy.totalTime) {
+      let totalTime = Math.round(100000*this.policy.totalTime)/100000;
+      let text = "Elapsed time: "+totalTime;
+      if (this.policy.generationTime) {
+        let generationTime = Math.round(100000*this.policy.generationTime)/100000;
+        text += " (Generation: " + generationTime + ")";
+      }
+			infoList.append("li").text(text);
 		}
 		infoList.append("li")
 			.text("State/States: "+this.policy.state+" / "+this.policy.states.length);

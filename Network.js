@@ -16,7 +16,7 @@ Network.get = function get(url) {
 			if (req.status == 200) {
 				resolve(req.response);
 			} else {
-				reject(Error(req.statusText));
+				reject(new Error(req.statusText+": "+req.response));
 			}
 		};
 		req.onerror = function() {

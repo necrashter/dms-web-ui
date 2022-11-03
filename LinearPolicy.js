@@ -150,9 +150,14 @@ class LinearPolicyView {
 	policyNavigator() {
 		this.div.html("");
 		if(this.prelude) this.prelude(this.div);
-		if(this.policy.duration) {
-			this.div.append("p")
-				.text("Elapsed time: "+this.policy.duration);
+		if(this.policy.totalTime) {
+      let totalTime = Math.round(100000*this.policy.totalTime)/100000;
+      let text = "Elapsed time: "+totalTime;
+      if (this.policy.generationTime) {
+        let generationTime = Math.round(100000*this.policy.generationTime)/100000;
+        text += " (Generation: " + generationTime + ")";
+      }
+			this.div.append("p").text(text);
 		}
 		this.div.append("p")
 			.text(`You can use the buttons or 

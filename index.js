@@ -1,50 +1,44 @@
-{
-    "name": "RestoratioN",
+fallbackGraph = {
     "nodes": [
         {
             "latlng": [
-                41.015300110394236,
-                29.086003303527836
+                41.01734009875206,
+                29.1108512878418
             ],
             "pf": 0.03698379889128911,
-            "status": 1,
-			"name": "Kadikoy #1"
+            "status": 1
         },
         {
             "latlng": [
-                41.01963847204114,
-                29.08317089080811
+                41.034693545339685,
+                29.099521636962894
             ],
             "pf": 0.9148521965848937,
-            "status": 0,
-			"name": "Bulgurlu #1"
+            "status": 0
         },
         {
             "latlng": [
-                41.02384623771846,
-                29.084458351135257
+                41.051524608048965,
+                29.104671478271488
             ],
             "pf": 0.34119230216877927,
-            "status": 0,
-			"name": "Bulgurlu #2"
+            "status": 0
         },
         {
             "latlng": [
-                41.02294004065665,
-                29.077463150024418
+                41.047899819801714,
+                29.07669067382813
             ],
             "pf": 0.9082687604545456,
-            "status": 0,
-			"name": "Bulgurlu #3"
+            "status": 0
         },
         {
             "latlng": [
-                41.0192176362874,
-                29.074330329895023
+                41.03301020232474,
+                29.06415939331055
             ],
             "pf": 0.07397644202305376,
-            "status": 0,
-			"name": "Bulgurlu #4"
+            "status": 0
         },
         {
             "latlng": [
@@ -52,71 +46,63 @@
                 29.077720642089847
             ],
             "pf": 0.5807757574946012,
-            "status": 0,
-			"name": "Dostluk Park"
+            "status": 0
         },
         {
             "latlng": [
-                41.013357189848705,
-                29.071283340454105
+                41.009568416569934,
+                29.05197143554688
             ],
             "pf": 0.13682184129199382,
-            "status": 0,
-			"name": "Küçükçamlıca #1"
+            "status": 0
         },
         {
             "latlng": [
-                41.0169837894657,
-                29.067292213439945
+                41.02407481503795,
+                29.036006927490238
             ],
             "pf": 0.8754028480152974,
-            "status": 0,
-			"name": "Küçükçamlıca #2"
+            "status": 0
         },
         {
             "latlng": [
-                41.00966500938273,
-                29.066734313964847
+                40.99479969470605,
+                29.033775329589847
             ],
             "pf": 0.693212626480581,
-            "status": 0,
-			"name": "Küçükçamlıca #3"
+            "status": 0
         },
         {
             "latlng": [
-                41.00998891796685,
-                29.08235549926758
+                40.996095329042525,
+                29.096260070800785
             ],
             "pf": 0.0868797205434576,
-            "status": 0,
-			"name": "Cumhuriyet #1"
+            "status": 0
         },
         {
             "latlng": [
-                41.010345210056485,
-                29.07454490661621
+                40.997520497401055,
+                29.065017700195312
             ],
             "pf": 0.3976469787339173,
-            "status": 0,
-			"name": "Cumhuriyet #2"
+            "status": 0
         },
         {
             "latlng": [
-                41.00522682076193,
-                29.075489044189457
+                40.97704694022287,
+                29.068794250488285
             ],
             "pf": 0.5105499328800183,
-            "status": 0,
-			"name": "Cumhuriyet #3"
+            "status": 0
         },
         {
             "latlng": [
-                41.00736507538029,
-                29.089221954345707
+                40.9855999586963,
+                29.123725891113285
             ],
             "pf": 0.47675007999751096,
-            "status": 0,
-			"name": "Cumhuriyet #4"
+            "status": 0
         }
     ],
     "branches": [
@@ -203,15 +189,57 @@
     "resources": [
         {
             "latlng": [
-                41.01559155019519,
-                29.092054367065433
+                41.01863528998129,
+                29.130249023437504
             ],
             "type": null
         }
     ],
     "view": {
-		"lat": 41.01408581841274,
-		"lng": 29.079952239990238
-	},
-    "zoom": 15
+        "lat": 41.003803826826505,
+        "lng": 29.081583023071293
+    },
+    "zoom": 13
 }
+
+var graph;
+
+function loadGraphFromServer(g) {
+	return Network.get("graphs/"+g.filename).then(response => {
+		graph.loadGraph(JSON.parse(response));
+		if(g.solutionFile) graph.solutionFile = "graphs/"+g.solutionFile;
+	}).catch(error => {
+		alert("Failed to get graph data from server:\n"+error);
+	});
+}
+
+/**
+ * Gets the graph list from server, and creates the selection UI in the right
+ * panel.
+ * graph must be cleared and null before calling this function.
+ */
+function openSelectGraph() {
+	graph = new Graph(Map);
+	Network.get("/get-graphs").then(response => {
+		let fileList = JSON.parse(response);
+		console.log(fileList);
+		selectGraph(fileList);
+	}).catch(error => {
+		selectGraph({'': [
+			{name: "Test Graph",
+				view: fallbackGraph.view,
+				load: () => new Promise((resolve) => {
+					graph.loadGraph(fallbackGraph);
+					resolve();
+				})}
+		]}, div => {
+			div.append("p")
+				.text("Failed to get graph list from server: "+error.message)
+				.style("color", "red");
+			div.append("p")
+				.text("You can load a built-in graph.")
+		});
+	});
+}
+
+openSelectGraph();

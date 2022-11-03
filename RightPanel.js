@@ -63,6 +63,9 @@ function selectGraph(dirlist, prebody=null) {
 	};
 	let choices = dirlist[''];
 	delete dirlist[''];
+  if (!choices) {
+    throw new Error("The list is empty!");
+  }
 	markers = choices.map((g,i) => {
 		let m = L.marker(g.view, {
 			icon: getGraphIcon(g.name),
