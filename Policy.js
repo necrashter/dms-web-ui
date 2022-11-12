@@ -507,37 +507,37 @@ function loadPolicy(div, graph, policy, options={}) {
 }
 
 
-function requestSaveExp(graph, settings) {
+function requestSaveProblem(graph, settings) {
 	let request = {
 		graph: graph.serialize(),
 	};
 	Object.assign(request, settings);
-	return Network.post("/save-experiment", JSON.stringify(request));
+	return Network.post("/save-problem", JSON.stringify(request));
 }
 
 /**
- * Save the policy for an experiment.
+ * Save this configuration as a problem.
  */
-function saveAsExperiment(div, graph, settings) {
-	console.log("Requesting to save experiment...");
+function saveProblem(div, graph, settings) {
+	console.log("Requesting to save problem...");
 	div.html("");
 	addSpinnerDiv(div).append("p").text("Waiting response from server...");
-	requestSaveExp(graph, settings).then(response => {
+	requestSaveProblem(graph, settings).then(response => {
 		response = JSON.parse(response);
 		console.log("Response:", response);
 		div.resetDiv(settings.name);
 		if (response.successful) {
-			div.append("b").text("Successfully saved experiment as:");
+			div.append("b").text("Successfully saved problem as:");
 			div.append("p").text(settings.name);
 		} else {
-			div.append("b").text("Failed to save experiment!")
+			div.append("b").text("Failed to save problem!")
 				.style("color","red");
 			div.append("p").text(response.error)
 				.style("color","red");
 		}
 	}).catch(error => {
 		div.resetDiv(settings.name);
-		div.append("b").text("Failed to save experiment!")
+		div.append("b").text("Failed to save problem!")
 			.style("color","red");
 		div.append("p").html(error)
 			.style("color","red");
@@ -1016,27 +1016,27 @@ function policySettings(div, graph){
 				requestNewPolicy(...lastRequestedPolicy);
 			});
 	}
-	let experimentDiv = div.append("div");
-	experimentDiv.resetDiv = (previousName) => {
+	let problemDiv = div.append("div");
+	problemDiv.resetDiv = (previousName) => {
 		if (!previousName) {
-			previousName = graph.name+" Exp";
+			previousName = graph.name;
 		}
-		experimentDiv.html("");
-		experimentDiv.append("hr");
-		experimentDiv.append("h3").text("Save this configuration");
-		let experimentName = createTextInput(experimentDiv, "Experiment Name", previousName);
-		experimentDiv.append("div").classed("blockButton", true)
-			.text("Save as Experiment")
+		problemDiv.html("");
+		problemDiv.append("hr");
+		problemDiv.append("h3").text("Save this configuration");
+		let problemName = createTextInput(problemDiv, "Problem Name", previousName);
+		problemDiv.append("div").classed("blockButton", true)
+			.text("Save Problem")
 			.on("click", () => {
 				request = getCurrentRequest();
-				request.name = experimentName.property("value");
+				request.name = problemName.property("value");
 				console.log("Save Request:", request);
 				if (request) {
-					saveAsExperiment(experimentDiv, graph, request);
+					saveProblem(problemDiv, graph, request);
 				}
 			});
 	};
-	experimentDiv.resetDiv();
+	problemDiv.resetDiv();
 }
 
 function selectPrioritizedNode(div, graph){
