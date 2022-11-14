@@ -976,15 +976,17 @@ function policySettings(div, graph){
 		graph.contextMenuListener = null;
 	}
 	function getCurrentRequest() {
-		horizonValue = parseInt(horizon.property("value"));
+		let horizonValue = parseInt(horizon.property("value"));
 		if(isNaN(horizonValue)) {
-			errorDiv.text("Invalid horizon");
-			return null;
+      if (horizon.property("value")) {
+        errorDiv.text("Invalid horizon");
+        return null;
+      } else {
+        horizonValue = null;
+      }
 		}
 		let request = {
-			policyConfig: {
-				horizon: horizonValue,
-			}
+      horizon: horizonValue,
 		};
 		request.priorities = priorityClasses.filter(a => a.nodes.size > 0).map(a => {
 			return {
@@ -1140,6 +1142,7 @@ function selectPrioritizedNode(div, graph){
 	div.append("div").classed("blockButton", true)
 		.text("Generate Policy")
 		.on("click", () => {
+      // TODO: code duplication
 			horizonValue = parseInt(horizon.property("value"));
 			if(isNaN(horizonValue)) {
 				errorDiv.text("Invalid horizon");
@@ -1176,6 +1179,7 @@ function selectPolicyOptions(div, graph){
 	div.append("div").classed("blockButton", true)
 		.text("Generate Policy")
 		.on("click", () => {
+      // TODO: code duplication
 			horizonValue = parseInt(horizon.property("value"));
 			if(isNaN(horizonValue)) {
 				errorDiv.text("Invalid horizon");
