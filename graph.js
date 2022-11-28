@@ -985,6 +985,13 @@ class Graph {
 		this.render(this.map);
 	}
 	contextMenu(event) {
+    // Snap the context menu to grid, if enabled
+    if (this._snapToGrid) {
+      let s = this._snapToGrid;
+      event.latlng.lat = Math.floor(event.latlng.lat / s.latSize) * s.latSize + s.latOffset;
+      event.latlng.lng = Math.floor(event.latlng.lng / s.lngSize) * s.lngSize + s.lngOffset;
+    }
+    // Call the correct context menu variant
 		if(this.mode == 0) this.normalContextMenu(event);
 		else this.editContextMenu(event);
 	}
@@ -1239,7 +1246,15 @@ class Graph {
       processLatlng(resource.latlng);
     }
 
+    this._snapToGrid = {
+      latSize, lngSize,
+      latOffset, lngOffset,
+    };
     this.rerender();
+  }
+
+  disableSnapToGrid() {
+    this._snapToGrid = null;
   }
 } //end Graph
 
