@@ -1222,6 +1222,25 @@ class Graph {
 	onPanelHide() {
 		this.lastEdit.active = false;
 	}
+
+  snapToGrid(latSize, lngSize, latOffset, lngOffset) {
+    latOffset = (typeof latOffset !== 'undefined') ? latOffset : 0.0;
+    lngOffset = (typeof lngOffset !== 'undefined') ? lngOffset : 0.0;
+
+    function processLatlng(latlng) {
+      latlng[0] = Math.floor(latlng[0] / latSize) * latSize + latOffset;
+      latlng[1] = Math.floor(latlng[1] / lngSize) * lngSize + lngOffset;
+    }
+
+    for (let node of this.nodes) {
+      processLatlng(node.latlng);
+    }
+    for (let resource of this.resources) {
+      processLatlng(resource.latlng);
+    }
+
+    this.rerender();
+  }
 } //end Graph
 
 
