@@ -986,8 +986,8 @@ class Graph {
 	}
 	contextMenu(event) {
     // Snap the context menu to grid, if enabled
-    if (this._snapToGrid) {
-      let s = this._snapToGrid;
+    if (this.grid) {
+      let s = this.grid;
       event.latlng.lat = Math.floor(event.latlng.lat / s.latSize) * s.latSize + s.latOffset;
       event.latlng.lng = Math.floor(event.latlng.lng / s.lngSize) * s.lngSize + s.lngOffset;
     }
@@ -1231,8 +1231,10 @@ class Graph {
 	}
 
   snapToGrid(latSize, lngSize, latOffset, lngOffset) {
-    latOffset = (typeof latOffset !== 'undefined') ? latOffset : 0.0;
-    lngOffset = (typeof lngOffset !== 'undefined') ? lngOffset : 0.0;
+    latSize = (typeof latSize !== 'undefined') ? latSize : GridDefaults.latSize;
+    lngSize = (typeof lngSize !== 'undefined') ? lngSize : GridDefaults.lngSize;
+    latOffset = (typeof latOffset !== 'undefined') ? latOffset : GridDefaults.latOffset;
+    lngOffset = (typeof lngOffset !== 'undefined') ? lngOffset : GridDefaults.lngOffset;
 
     function processLatlng(latlng) {
       latlng[0] = Math.floor(latlng[0] / latSize) * latSize + latOffset;
@@ -1246,15 +1248,22 @@ class Graph {
       processLatlng(resource.latlng);
     }
 
-    this._snapToGrid = {
+    this.grid = {
       latSize, lngSize,
       latOffset, lngOffset,
     };
     this.rerender();
+
+    this.gridLayer = L.grid({
+      grid: this.grid,
+    });
+    this.gridLayer.addTo(Map);
   }
 
   disableSnapToGrid() {
-    this._snapToGrid = null;
+    this.grid = null;
+    this.gridLayer.remove();
+    this.gridLayer = null;
   }
 } //end Graph
 
