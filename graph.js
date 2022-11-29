@@ -898,6 +898,9 @@ class Graph {
 		
 	}
 	handleKeyDown(event) {
+    if (this.grid && this.map.mousePos) {
+      this.grid.snap(this.map.mousePos);
+    }
 		if(this.mode == 1) {
 			switch(event.key) {
 				case "a":
@@ -987,9 +990,7 @@ class Graph {
 	contextMenu(event) {
     // Snap the context menu to grid, if enabled
     if (this.grid) {
-      let s = this.grid;
-      event.latlng.lat = Math.floor(event.latlng.lat / s.latSize) * s.latSize + s.latOffset;
-      event.latlng.lng = Math.floor(event.latlng.lng / s.lngSize) * s.lngSize + s.lngOffset;
+      this.grid.snap(event.latlng);
     }
     // Call the correct context menu variant
 		if(this.mode == 0) this.normalContextMenu(event);
@@ -1236,22 +1237,18 @@ class Graph {
     latOffset = (typeof latOffset !== 'undefined') ? latOffset : GridDefaults.latOffset;
     lngOffset = (typeof lngOffset !== 'undefined') ? lngOffset : GridDefaults.lngOffset;
 
-    function processLatlng(latlng) {
-      latlng[0] = Math.floor(latlng[0] / latSize) * latSize + latOffset;
-      latlng[1] = Math.floor(latlng[1] / lngSize) * lngSize + lngOffset;
-    }
-
-    for (let node of this.nodes) {
-      processLatlng(node.latlng);
-    }
-    for (let resource of this.resources) {
-      processLatlng(resource.latlng);
-    }
-
-    this.grid = {
+    this.grid = new LatLngGrid({
       latSize, lngSize,
       latOffset, lngOffset,
-    };
+    });
+
+    for (let node of this.nodes) {
+      this.grid.snap(node.latlng);
+    }
+    for (let resource of this.resources) {
+      this.grid.snap(resource.latlng);
+    }
+
     this.rerender();
 
     this.gridLayer = L.grid({

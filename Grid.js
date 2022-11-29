@@ -5,6 +5,23 @@ let GridDefaults = {
   lngOffset: 0.0,
 };
 
+class LatLngGrid {
+  constructor(options) {
+    options = options != null ? options : GridDefaults;
+    Object.assign(this, options);
+  }
+
+  snap(latlng) {
+    if (Array.isArray(latlng)) {
+      latlng[0] = Math.round(latlng[0] / this.latSize) * this.latSize + this.latOffset;
+      latlng[1] = Math.round(latlng[1] / this.lngSize) * this.lngSize + this.lngOffset;
+    } else {
+      latlng.lat = Math.round(latlng.lat / this.latSize) * this.latSize + this.latOffset;
+      latlng.lng = Math.round(latlng.lng / this.lngSize) * this.lngSize + this.lngOffset;
+    }
+  }
+}
+
 function getGridSteps(low, high, size, offset, maxSteps) {
   let lowStep = Math.floor(low / size);
   let highStep = Math.ceil(high / size);
@@ -22,7 +39,7 @@ function getGridSteps(low, high, size, offset, maxSteps) {
 
 L.Grid = L.LayerGroup.extend({
 	options: {
-    grid: GridDefaults,
+    grid: new LatLngGrid(),
 
     maxSteps: 200,
 
