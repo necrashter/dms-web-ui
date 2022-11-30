@@ -22,6 +22,8 @@ class LatLngGrid {
   }
 }
 
+let GlobalGrid = new LatLngGrid();
+
 function getGridSteps(low, high, size, offset, maxSteps) {
   let lowStep = Math.floor(low / size);
   let highStep = Math.ceil(high / size);
@@ -39,20 +41,20 @@ function getGridSteps(low, high, size, offset, maxSteps) {
 
 L.Grid = L.LayerGroup.extend({
 	options: {
-    grid: new LatLngGrid(),
+    grid: GlobalGrid,
 
     maxSteps: 200,
 
 		// Path style for the grid lines
 		lineStyle: {
 			stroke: true,
-			color: '#111',
+			color: "#111",
 			opacity: 0.6,
 			weight: 1
 		},
 		
 		// Redraw on move or moveend
-		redraw: 'moveend',
+		redraw: "moveend",
 	},
 
 	initialize: function (options) {
@@ -63,17 +65,18 @@ L.Grid = L.LayerGroup.extend({
 	onAdd: function (map) {
 		this._map = map;
 
-		let grid = this.redraw();
-		this._map.on('viewreset '+ this.options.redraw, function () {
-			grid.redraw();
-		});
+		this.redraw();
+
+    this.listener = () => {
+			this.redraw();
+		};
+		this._map.on("viewreset "+ this.options.redraw, this.listener);
 
 		this.eachLayer(map.addLayer, map);
 	},
 	
 	onRemove: function (map) {
-		// remove layer listeners and elements
-		map.off('viewreset '+ this.options.redraw, this.map);
+		map.off("viewreset "+ this.options.redraw, this.listener);
 		this.eachLayer(this.removeLayer, this);
 	},
 

@@ -1231,36 +1231,17 @@ class Graph {
 		this.lastEdit.active = false;
 	}
 
-  snapToGrid(latSize, lngSize, latOffset, lngOffset) {
-    latSize = (typeof latSize !== 'undefined') ? latSize : GridDefaults.latSize;
-    lngSize = (typeof lngSize !== 'undefined') ? lngSize : GridDefaults.lngSize;
-    latOffset = (typeof latOffset !== 'undefined') ? latOffset : GridDefaults.latOffset;
-    lngOffset = (typeof lngOffset !== 'undefined') ? lngOffset : GridDefaults.lngOffset;
-
-    this.grid = new LatLngGrid({
-      latSize, lngSize,
-      latOffset, lngOffset,
-    });
+  snapToGrid(grid) {
+    grid = grid || this.grid;
 
     for (let node of this.nodes) {
-      this.grid.snap(node.latlng);
+      grid.snap(node.latlng);
     }
     for (let resource of this.resources) {
-      this.grid.snap(resource.latlng);
+      grid.snap(resource.latlng);
     }
 
     this.rerender();
-
-    this.gridLayer = L.grid({
-      grid: this.grid,
-    });
-    this.gridLayer.addTo(Map);
-  }
-
-  disableSnapToGrid() {
-    this.grid = null;
-    this.gridLayer.remove();
-    this.gridLayer = null;
   }
 } //end Graph
 

@@ -10,6 +10,7 @@ var Settings = {
 	renderNextState: true,
 	nopf: false,
 	screenshotPad: 0.125,
+  enableGrid: false,
 }
 
 const Map = L.map('map', {
@@ -20,6 +21,8 @@ const Map = L.map('map', {
 	{ lat: 41.059420776730676, lng: 29.068107604980472 },
 	11
 );
+
+const MapGrid = L.grid();
 
 const NoMap = L.tileLayer('assets/WhiteBackground.jpg', {
 	maxZoom: 19,
@@ -170,6 +173,28 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 		},
 	];
 	createCustomSelectBox(d3.select(TopRightPanel), colorOptions, 1);
+
+	{
+		let div = d3.create("div").classed("customCheckbox", true);
+		let checkbox = div.append("input")
+			.attr("id", "enableGrid")
+			.attr("type", "checkbox")
+			.on("change", () => {
+				Settings.enableGrid = checkbox.node().checked;
+        if (Settings.enableGrid) {
+          MapGrid.addTo(Map);
+          if (graph) graph.grid = MapGrid.options.grid;
+        } else {
+          MapGrid.remove(Map);
+          if (graph) graph.grid = null;
+        }
+			});
+		checkbox.node().checked = Settings.enableGrid;
+		div.append("label")
+			.attr("for", "enableGrid")
+			.text("Grid");
+		TopRightPanel.appendChild(div.node());
+	}
 })();
 
 
