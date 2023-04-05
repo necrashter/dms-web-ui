@@ -65,8 +65,9 @@ function selectMap(name) {
 	selectedBaseMap = name;
 }
 
-// selectMap("StamenTerrain");
-selectMap("Nomap");
+// Default map
+selectMap("OpenStreetMap");
+
 var TopRightPanel = document.getElementById("TopRightPanel");
 
 
