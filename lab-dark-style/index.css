@@ -376,7 +376,7 @@ button:hover {
 }
 
 #MenuButton {
-	top: 3em;
+	top: 0;
 	z-index: 600;
 	position: absolute;
 	font-size: 1.5em;

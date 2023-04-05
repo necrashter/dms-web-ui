@@ -766,8 +766,6 @@ class Graph {
 		if(this.mode == 1) {
 			resetPolicyScreen();
 			this.dirty = true;
-			TopLeftPanel.classList.add("warning");
-			TopLeftPanel.innerText = "EDIT MODE";
 			let topbar = d3.create("div").attr("id", "TopBar");
 			topbar.append("label").classed("blockButton", true)
 				.classed("alt", true)
@@ -808,8 +806,6 @@ class Graph {
 			  <p>w: add solar panel</p>
 			`;
 		} else {
-			TopLeftPanel.classList.remove("warning");
-			TopLeftPanel.innerText = "METU CPS";
 			let topbar = this.topbar;
 			topbar.transition().duration(1000)
 				.style("transform", "translate(0, -53px)")
