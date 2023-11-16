@@ -9,6 +9,7 @@ var attributionHTML = `
   <h1>Attributions</h1>
   <p>Icons made by <a href="http://www.freepik.com/" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a></p>
   <p>Icons made by <a href="https://www.flaticon.com/free-icon/solar-energy_2933972" title="Good Ware">Good Ware</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a></p>
+  <p><a href="https://www.veryicon.com/icons/system/system-icon-6/substation.html">Substation Icon</a></p>
   <p><b>Target Icon:</b>
   Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a></p>
   Footprint:

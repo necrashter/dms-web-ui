@@ -29,7 +29,7 @@ const IconAnchor = [25, 25];
 
 Icons.tower = L.divIcon({
 	className: 'divIcon',
-	html: "<div class='markerDiv'><img src='assets/tower.png' /></div>",
+	html: "<div class='markerDiv'><img src='assets/substation.png' /></div>",
 	iconSize: IconSize,
 	iconAnchor: IconAnchor
 });
