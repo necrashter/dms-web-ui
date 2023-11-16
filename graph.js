@@ -760,6 +760,54 @@ class Graph {
 			this.nodes.push(node);
 		}
 	}
+  /**
+   * Get an adjacency list for all nodes.
+   */
+  getAdjacencyList() {
+    let adj = this.nodes.map(node => []);
+    for (let branch of this.branches) {
+      let a = branch.nodes[0];
+      let b = branch.nodes[1];
+      adj[a].push(b);
+      adj[b].push(a);
+    }
+    return adj;
+  }
+  /**
+   * Remove buses that don't have a connection to an energy source.
+   */
+  removeIsolated() {
+    let adj = this.getAdjacencyList();
+    let keep = this.externalBranches.map(branch => branch.node);
+    let q = this.externalBranches.map(branch => branch.node);
+    while (q.length > 0) {
+      let next = q.pop();
+      for (let i of adj[next]) {
+        if (!keep.includes(i)) {
+          keep.push(i);
+          q.push(i);
+        }
+      }
+    }
+    keep.sort((a,b) => a-b);
+    this.nodes = this.nodes.filter((node, index) => keep.includes(index));
+    for (let i = this.branches.length - 1; i >= 0; --i) {
+      let branch = this.branches[i];
+      branch.nodes[0] = keep.indexOf(branch.nodes[0]);
+      branch.nodes[1] = keep.indexOf(branch.nodes[1]);
+      if (branch.nodes[0] == -1 || branch.nodes[1] == -1) {
+        this.branches.splice(i, 1);
+      }
+    }
+    for (let i = this.externalBranches.length - 1; i >= 0; --i) {
+      let ext = this.externalBranches[i];
+      ext.node = keep.indexOf(ext.node);
+      // ext.node will never be -1
+    }
+  }
+  /**
+   * Switch between normal and edit mode.
+   */
 	setMode(mode) {
 		if(this.mode == mode) return;
 		this.mode = mode;
@@ -790,6 +838,13 @@ class Graph {
 					this.branches = [];
 					this.externalBranches = [];
 					this.resources = [];
+					this.rerender();
+				});
+			topbar.append("div").classed("blockButton", true)
+				.classed("alt", true)
+				.text("Isolate")
+				.on("click", () => {
+          this.removeIsolated();
 					this.rerender();
 				});
 			topbar.style("transform", "translate(0, -53px)")
