@@ -129,15 +129,43 @@ class InteractivePolicy {
 	getNextState() {
 		return this.states[this.action[this.next][0] + ACTION_OFFSET];
 	}
-	getCurrentTeams() {
-		return this.teams[this.state];
+	/**
+	 * Given a list of teams and their history,
+	 * embed the previous location info into teams and return.
+	 */
+	getTeamsWithPrevious(teams, hist) {
+		// Set the previous location of each team.
+		for(let j = 0; j < teams.length; ++j) {
+			for(let i = hist.length-1; i >= 0; --i) {
+				teams[j].previous = null;
+				let prev = hist[i];
+				if(teams[j].index != prev[j].index) {
+					// The index of the previous location.
+					teams[j].previous = prev[j].index;
+					break;
+				}
+			}
+		}
+		return teams;
 	}
+	/**
+	 * Get the current teams with the previous location info.
+	 */
+	getCurrentTeams() {
+		let teams = this.teams[this.state];
+		// History of team states
+		let hist = this.previousStates.map(s => this.teams[s.state]);
+		return this.getTeamsWithPrevious(teams, hist);
+	}
+	/**
+	 * Get the next teams WITHOUT the previous location info.
+	 */
 	getNextTeams() {
 		return this.teams[this.action[this.next][0] + ACTION_OFFSET];
 	}
 	describeAction(actionNum = null) {
 		if(actionNum == null) actionNum =this.actionNum;
-		let header =  "Action #"+actionNum;
+		let header =	"Action #"+actionNum;
 		let energizationInfo = "";
 		let teamInfo = "";
 		let valueInfo = "";
@@ -978,15 +1006,15 @@ function policySettings(div, graph){
 	function getCurrentRequest() {
 		let horizonValue = parseInt(horizon.property("value"));
 		if(isNaN(horizonValue)) {
-      if (horizon.property("value")) {
-        errorDiv.text("Invalid horizon");
-        return null;
-      } else {
-        horizonValue = null;
-      }
+			if (horizon.property("value")) {
+				errorDiv.text("Invalid horizon");
+				return null;
+			} else {
+				horizonValue = null;
+			}
 		}
 		let request = {
-      horizon: horizonValue,
+			horizon: horizonValue,
 		};
 		request.priorities = priorityClasses.filter(a => a.nodes.size > 0).map(a => {
 			return {
@@ -1142,7 +1170,7 @@ function selectPrioritizedNode(div, graph){
 	div.append("div").classed("blockButton", true)
 		.text("Generate Policy")
 		.on("click", () => {
-      // TODO: code duplication
+			// TODO: code duplication
 			horizonValue = parseInt(horizon.property("value"));
 			if(isNaN(horizonValue)) {
 				errorDiv.text("Invalid horizon");
@@ -1179,7 +1207,7 @@ function selectPolicyOptions(div, graph){
 	div.append("div").classed("blockButton", true)
 		.text("Generate Policy")
 		.on("click", () => {
-      // TODO: code duplication
+			// TODO: code duplication
 			horizonValue = parseInt(horizon.property("value"));
 			if(isNaN(horizonValue)) {
 				errorDiv.text("Invalid horizon");
@@ -1255,8 +1283,8 @@ class InteractivePolicyView {
 	}
 	teamOnMouseOver(event) {
 		let index = event.target.data;
-		let team = this.policy.getCurrentTeams()[index];
-		let next = this.policy.end ? null : this.policy.getNextTeams()[index];
+		// let team = this.policy.getCurrentTeams()[index];
+		// let next = this.policy.end ? null : this.policy.getNextTeams()[index];
 		let div = d3.select(Tooltip.div);
 		div.html("");
 		div.append("b").text(`Team #${index+1}`);
@@ -1269,32 +1297,34 @@ class InteractivePolicyView {
 
 	renderTeam(i, currentTeam, nextTeam) {
 		let color = TeamColors[i];
-		let node = this.policy.teamNodes[currentTeam.node];
+		let node = this.policy.teamNodes[currentTeam.index];
 		let nextNode = null;
 		let position = node;
 		let info = [];
-		if(currentTeam.target != null) {
-			nextNode = this.policy.teamNodes[currentTeam.target];
-      let travelTime = this.policy.travelTimes[currentTeam.node][currentTeam.target];
-			let percent = currentTeam.time / travelTime;
+		if(currentTeam.time > 0) {
+			// Team is en route
+			nextNode = node;
+			node = this.policy.teamNodes[currentTeam.previous];
+			let travelTime = this.policy.travelTimes[currentTeam.previous][currentTeam.index];
+			// currentTeam.time is the remaining time
+			let percent = (travelTime - currentTeam.time) / travelTime;
 			position = [
 				node[0]*(1-percent) + nextNode[0]*percent,
 				node[1]*(1-percent) + nextNode[1]*percent
 			];
-			if(currentTeam.node < this.graph.nodes.length) {
-				info.push("Was previously at node #" + currentTeam.node);
+			if(currentTeam.previous < this.graph.nodes.length) {
+				info.push("Was previously at node #" + currentTeam.previous);
 			}
-			info.push("Moving to #" + currentTeam.target + ", "+
-				(currentTeam.travelTime-currentTeam.time) +" seconds remaining.");
+			info.push("Moving to #" + currentTeam.index + ", "+
+				currentTeam.time +" timestep(s) remaining.");
 		} else if(nextTeam) {
-			let nextNodeId = nextTeam.target != null ? nextTeam.target : nextTeam.node;
-			nextNode = this.policy.teamNodes[nextNodeId];
-			if(currentTeam.node < this.graph.nodes.length) {
-				info.push("Currently at node #" + currentTeam.node);
+			nextNode = this.policy.teamNodes[nextTeam.index];
+			if(currentTeam.previous < this.graph.nodes.length) {
+				info.push("Currently at node #" + currentTeam.index);
 			}
-			info.push("Will move to #" + nextNodeId + ".");
-		} else if(currentTeam.node < this.graph.nodes.length) {
-			info.push("Currently at node #" + currentTeam.node);
+			info.push("Will move to #" + nextTeam.index + ".");
+		} else if(currentTeam.previous < this.graph.nodes.length) {
+			info.push("Currently at node #" + currentTeam.index);
 		}
 		if(Settings.renderTeamArrows && nextNode != null) {
 			let line = L.polyline([node, nextNode], {
@@ -1400,12 +1430,12 @@ class InteractivePolicyView {
 		if(this.prelude) this.prelude(infoDiv);
 		let infoList = infoDiv.append("ul");
 		if(this.policy.totalTime) {
-      let totalTime = Math.round(100000*this.policy.totalTime)/100000;
-      let text = "Elapsed time: "+totalTime;
-      if (this.policy.generationTime) {
-        let generationTime = Math.round(100000*this.policy.generationTime)/100000;
-        text += " (Generation: " + generationTime + ")";
-      }
+			let totalTime = Math.round(100000*this.policy.totalTime)/100000;
+			let text = "Elapsed time: "+totalTime;
+			if (this.policy.generationTime) {
+				let generationTime = Math.round(100000*this.policy.generationTime)/100000;
+				text += " (Generation: " + generationTime + ")";
+			}
 			infoList.append("li").text(text);
 		}
 		infoList.append("li")
