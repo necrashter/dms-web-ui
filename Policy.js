@@ -182,6 +182,8 @@ class InteractivePolicy {
 		let energized = currentState.map((b, i) => b != nextState[i] ? i : null).filter(a => a != null);
 		if(energized.length > 0) {
 			energizationInfo = "&emsp;Node(s): " + energized.join(", ") + "<br/>";
+		} else {
+			energizationInfo = "&emsp;No energizations<br/>";
 		}
 		if(this.teams) {
 			let currentTeam = this.teams[this.state];
