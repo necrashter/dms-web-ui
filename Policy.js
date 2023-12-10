@@ -190,10 +190,11 @@ class InteractivePolicy {
 			let nextTeam = this.teams[action[0][0] + ACTION_OFFSET];
 			let teamInfos = [];
 			for(let i = 0; i < currentTeam.length; ++i) {
-				if(nextTeam[i].target != null) {
-					teamInfos.push((i+1)+" to "+nextTeam[i].target);
-				} else if(currentTeam[i].node != nextTeam[i].node) {
-					teamInfos.push((i+1)+" to "+nextTeam[i].node);
+				if(currentTeam[i].time > 0) {
+					// En route
+					teamInfos.push((i+1)+" to "+currentTeam[i].index);
+				} else {
+					teamInfos.push((i+1)+" to "+nextTeam[i].index);
 				}
 			}
 			if(teamInfos.length > 0) {
