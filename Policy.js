@@ -1055,11 +1055,14 @@ function policySettings(div, graph){
 			previousName = graph.name;
 		}
 		problemDiv.html("");
-		problemDiv.append("hr");
-		problemDiv.append("h3").text("Save this configuration");
-		let problemName = createTextInput(problemDiv, "Problem Name", previousName);
-		problemDiv.append("div").classed("blockButton", true)
-			.text("Save Problem")
+		problemDiv.append("hr").classed("medium", true);
+    let saveDiv = problemDiv.append("div").classed("saveDiv", true);
+    saveDiv.append("label").text("Name:");
+    let problemName = saveDiv.append("input")
+      .attr("type", "text")
+      .property("value", previousName);
+		saveDiv.append("div").classed("blockButton", true)
+			.text("Save")
 			.on("click", () => {
 				request = getCurrentRequest();
 				request.name = problemName.property("value");

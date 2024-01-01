@@ -692,3 +692,25 @@ input[type="text"] {
 summary {
 	cursor: pointer;
 }
+
+
+.saveDiv {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+}
+
+.saveDiv label {
+  margin-top: auto;
+  margin-bottom: auto;
+  margin-right: 0.4em;
+}
+
+.saveDiv input[type="text"] {
+  flex-grow: 1;
+  margin: 0.4em;
+}
+
+hr.medium {
+  margin: 0.9em 0em;
+}
