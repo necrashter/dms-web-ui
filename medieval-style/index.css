@@ -633,7 +633,7 @@ input[type="text"] {
 .selectList {
 	user-select: none;
 	border: 0.15em solid var(--blue-border);
-	margin: 2em 0em;
+	margin: 1em 0em;
 	background: var(--blue-dark-bg);
 }
 

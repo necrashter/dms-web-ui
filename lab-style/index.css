@@ -559,7 +559,7 @@ input[type="text"] {
 .selectList {
 	user-select: none;
     border: 0.15em solid var(--accent);
-    margin: 2em 1em;
+    margin: 1em 1em;
     border-radius: 0.5em;
     box-shadow: 0 0 5px 4px var(--accent);
 }
