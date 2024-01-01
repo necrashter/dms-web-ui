@@ -1180,71 +1180,82 @@ class Graph {
 		}
 		this.branches.forEach(branch => branch.energized = 0);
 	}
+	/**
+	 * Set the current state from a history of states.
+	 */
 	setState(hist) {
 		this.emptyState();
+		// TODO: handle cases where a bus gets energized from externalBranch
+		// but a neighboring bus gets energized from somewhere else
+		// Probably need to get sourceNames from server.
+		// Currently there's no mapping from sourceNames -> source IDs in the
+		// client side.
+		// TODO: Another limitation: When TG powers DER-powered buses,
+		// directions may change completely.
+
+		let externallyConnected = this.nodes.map(node => false);
+		for (let e of this.externalBranches) {
+			externallyConnected[e.node] = true;
+		}
 
 		let lastState = null;
 		let lastEnergizedBranches;
-		for(let s of hist) {
+		for (let s of hist) {
 			this._setState(s);
 			if (lastState == null) {
-				lastState = s;
+				// Shallow copy
+				lastState = [...s];
 				continue;
 			}
-			let diffs = [
-				// { i: index, potentials: [] }
-			];
+			lastEnergizedBranches = [];
+			let queue = [];
 			for (let i = 0; i < s.length; ++i) {
-				if (lastState[i] != s[i] && s[i] != "D") {
-					let potentials = [];
-					for(let b of this.nodes[i].branches) {
-						let other = b.branch.nodes[0] == i ?
+				if (lastState[i] != s[i]) {
+					if (s[i] == "D" || externallyConnected[i]) {
+						// Damaged, no need to update nearby branches.
+						// Connected to an energy source, external branch is already updated.
+						lastState[i] = s[i];
+					} else {
+						queue.push(i);
+					}
+				}
+			}
+			while (queue.length > 0) {
+				for (let qi = queue.length - 1; qi >= 0; --qi) {
+					let target = queue[qi];
+					// Find a suitable source node.
+					let source = null;
+					for (let b of this.nodes[target].branches) {
+						let other = b.branch.nodes[0] == target ?
 								b.branch.nodes[1] : b.branch.nodes[0];
-						if (lastState[other] == s[i]) {
-							potentials.push(other);
+						if (lastState[other] == s[target]) {
+							source = other;
+							break;
 						}
 					}
-					if (potentials.length > 0) {
-						diffs.push({
-							i: i,
-							potentials: potentials,
-						});
+					// No source found, we need to energize others first.
+					// NOTE: This may loop infinitely if the input is broken.
+					if (source == null) continue;
+					// Energize the relevant branch.
+					for(let b of this.nodes[target].branches) {
+						if (b.branch.nodes[0] == target && b.branch.nodes[1] == source) {
+							b.branch.nodes.reverse();
+							b.branch.energized = 1;
+							lastEnergizedBranches.push(b.branch);
+							break;
+						} else if (b.branch.nodes[0] == source && b.branch.nodes[1] == target) {
+							b.branch.energized = 1;
+							lastEnergizedBranches.push(b.branch);
+							break;
+						}
 					}
-					// TODO: handle cases where a bus gets energized from externalBranch
-					// but a neighboring bus gets energized from somewhere else
-					// Probably need to get sourceNames from server.
-					// Currently there's no mapping from sourceNames -> source IDs in the
-					// client side.
-					// TODO: Another limitation: When TG powers DER-powered buses,
-					// directions may change completely.
+					// Remove from queue.
+					queue.splice(qi, 1);
+					// Update last state for the next iteration.
+					lastState[target] = s[target];
 				}
 			}
-
-			lastEnergizedBranches = [];
-			while (diffs.length > 0) {
-				let mindiff = 0;
-				for (let i = 1; i < diffs.length; ++i) {
-					if (diffs[i].potentials.length < diffs[mindiff].potentials.length) {
-						mindiff = i;
-					}
-				}
-				mindiff = diffs.splice(mindiff, 1)[0];
-				let source = mindiff.potentials[0];
-				let target = mindiff.i;
-				for(let b of this.nodes[target].branches) {
-					if (b.branch.nodes[0] == target && b.branch.nodes[1] == source) {
-						b.branch.nodes.reverse();
-						b.branch.energized = 1;
-						lastEnergizedBranches.push(b.branch);
-						break;
-					} else if (b.branch.nodes[0] == source && b.branch.nodes[1] == target) {
-						b.branch.energized = 1;
-						lastEnergizedBranches.push(b.branch);
-						break;
-					}
-				}
-			}
-			lastState = s;
+			// lastState == s must hold at this point.
 		}
 		for (let b of lastEnergizedBranches) {
 			b.energized = 2;
