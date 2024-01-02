@@ -560,24 +560,16 @@ function saveProblem(div, graph, settings) {
 	div.html("");
 	addSpinnerDiv(div).append("p").text("Waiting response from server...");
 	requestSaveProblem(graph, settings).then(response => {
-		response = JSON.parse(response);
-		console.log("Response:", response);
+		console.log("Save Problem Response:", response);
 		div.resetDiv(settings.name);
-		if (response.successful) {
-			div.append("b").text("Successfully saved problem as:");
-			div.append("p").text(settings.name);
-		} else {
-			div.append("b").text("Failed to save problem!")
-				.style("color","red");
-			div.append("p").text(response.error)
-				.style("color","red");
-		}
+		let p = div.append("p");
+		p.append("b").text("Successfully saved problem as: ");
+		p.append("span").text(settings.name);
 	}).catch(error => {
 		div.resetDiv(settings.name);
-		div.append("b").text("Failed to save problem!")
+		div.append("p").append("b").text("Failed to save problem!")
 			.style("color","red");
-		div.append("p").html(error)
-			.style("color","red");
+		div.append("p").text(error).style("color","red");
 	});
 }
 
