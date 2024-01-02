@@ -73,18 +73,24 @@ function getMouseTeam(event) {
 
 class InteractivePolicy {
 	/**
-	 * policy is the direct output from server
+	 * solution is the direct output from server
 	 */
-	constructor(_graph, policy, initialize=true) {
+	constructor(_graph, solution, initialize=true) {
 		this.graph = graph;
-		for(let key in policy) {
-			this[key] = policy[key];
+		// Preserve the original solution for download.
+		this.solution = solution;
+		// Shallow copy the keys.
+		for (let key in solution) {
+			this[key] = solution[key];
 		}
 		if(initialize) {
 			this.end = false; // if true (No more actions available)
 			this.previousStates = [];
 			this.setState(0);
 		}
+	}
+	download() {
+		downloadData("solution.json", JSON.stringify(this.solution));
 	}
 	setAction(actionNum, next) {
 		this.actionNum = actionNum;
