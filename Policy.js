@@ -1301,7 +1301,7 @@ class InteractivePolicyView {
 		this.options = options;
 		Object.assign(this, options);
 		this.teamMarkers = [];
-		this.infoEnabled = true;
+		this.infoDiv = null;
 		this.policyNavigator();
 	}
 	setNext(i) {
@@ -1444,51 +1444,19 @@ class InteractivePolicyView {
 		this.markerLayer.addTo(Map);
 	}
 	policyNavigator() {
+		let detailsOpen = false;
+		if (this.infoDiv) {
+			detailsOpen = this.infoDiv.attr("open") != null;
+		}
 		this.createMarkerLayer();
 		this.div.html("");
 		let buttonDiv = this.div.append("div").classed("policyControls", true);
 		let prev = buttonDiv.append("div").classed("blockButton", true)
-			.text("Previous Step");
+			.text("🠈");
 		let next = buttonDiv.append("div").classed("blockButton", true)
-			.text("Next Step");
-		let infoButton = buttonDiv.append("div").classed("blockButton", true)
-			.text(this.infoEnabled ? "Hide Info" : "Show Info");
-
-		let infoDiv = this.div.append("div");
-		if(this.prelude) this.prelude(infoDiv);
-		let infoList = infoDiv.append("ul");
-		if(this.policy.totalTime) {
-			let totalTime = Math.round(100000*this.policy.totalTime)/100000;
-			let text = "Elapsed time: "+totalTime;
-			if (this.policy.generationTime) {
-				let generationTime = Math.round(100000*this.policy.generationTime)/100000;
-				text += " (Generation: " + generationTime + ")";
-			}
-			infoList.append("li").text(text);
-		}
-		infoList.append("li")
-			.text("State/States: "+this.policy.state+" / "+this.policy.states.length);
-		if(this.policy.values) {
-			infoList.append("li").text("Value: "+Math.min(...Object.values(this.policy.values[0])));
-		}
-		if(this.policy.times) {
-			let time = this.policy.times[this.policy.state];
-			infoList.append("li").text("Time: "+time);
-		}
-		if(!this.infoEnabled) {
-			infoDiv.style("display", "None");
-		}
-
-		infoButton.on("click", () => {
-			this.infoEnabled = !this.infoEnabled;
-			if(this.infoEnabled) {
-				infoButton.text("Hide Info");
-				infoDiv.style("display", "");
-			} else {
-				infoButton.text("Show Info");
-				infoDiv.style("display", "None");
-			}
-		});
+			.text("🠊");
+		buttonDiv.append("div").classed("info", true)
+			.html(`State #${this.policy.state}<br/>${this.policy.states.length} states`);
 
 		if(this.policy.previousStates.length>0) {
 			prev.on("click", () => {
@@ -1563,6 +1531,36 @@ class InteractivePolicyView {
 			this.div.append("p")
 				.text("No more actions are available.");
 		}
+
+		let infoDiv = this.div.append("details");
+		infoDiv.append("summary").text("Policy Details");
+		if(this.prelude) this.prelude(infoDiv);
+		let infoList = infoDiv.append("ul");
+		if(this.policy.totalTime) {
+			let totalTime = Math.round(100000*this.policy.totalTime)/100000;
+			let text = "Elapsed time: "+totalTime;
+			if (this.policy.generationTime) {
+				let generationTime = Math.round(100000*this.policy.generationTime)/100000;
+				text += " (Generation: " + generationTime + ")";
+			}
+			infoList.append("li").text(text);
+		}
+		if(this.policy.values) {
+			infoList.append("li").text("Value: "+Math.min(...Object.values(this.policy.values[0])));
+		}
+		if(this.policy.times) {
+			let time = this.policy.times[this.policy.state];
+			infoList.append("li").text("Time: "+time);
+		}
+		infoDiv.append("div").classed("blockButton", true)
+			.text("Download This Solution")
+			.on("click", () => {
+				this.policy.download();
+			});
+		if(detailsOpen) {
+			infoDiv.attr("open", "");
+		}
+		this.infoDiv = infoDiv;
 	}
 	updateMode() {
 		if(this.markerLayer) this.markerLayer.remove();

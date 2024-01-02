@@ -683,6 +683,11 @@ input[type="text"] {
 	flex-wrap: nowrap;
 }
 
+.policyControls .info {
+  flex-grow: 1;
+  text-align: right;
+}
+
 
 .rightFlexFloat {
 	flex-grow: 1;
