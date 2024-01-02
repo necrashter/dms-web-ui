@@ -164,7 +164,7 @@ class Graph {
 		this.setEventHandlers();
 	}
 	/**
-	 * Loads the graph data, doesn't render
+	 * Loads the graph data and renders.
 	 */
 	loadGraph(g) {
 		this.requiredFields.forEach(field => {
@@ -174,7 +174,6 @@ class Graph {
 				console.log("Warning: field not found in graph:", field);
 			}
 		});
-		if(g.solutionFile) this.solutionFile = g.solutionFile;
 		// nodes need to know their indexes
 		this.nodes.forEach((node, i) => {
 			node.index = i;

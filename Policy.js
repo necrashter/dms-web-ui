@@ -583,9 +583,12 @@ function requestPolicy(graph, settings) {
 
 var lastRequestedPolicy = null;
 
+/**
+ * Requests a new policy from the server.
+ */
 function requestNewPolicy(div, graph, settings={}) {
 	lastRequestedPolicy = [div, graph, settings];
-	console.log("requesting new policy...");
+	console.log("Requesting a new policy...");
 	div.html("");
 	addSpinnerDiv(div).append("p").text("Waiting response from server...");
 	requestPolicy(graph, settings).then(response => {
@@ -606,26 +609,32 @@ function requestNewPolicy(div, graph, settings={}) {
 	});
 }
 /**
- * Gets the premade policy from server if available,
- * otherwise requests new policy
+ * Gets a premade policy from the server.
  */
-function getPolicy(div, graph) {
+function getPolicy(div, graph, solutionName) {
 	div.html("");
 	addSpinnerDiv(div).append("p").text("Please wait...");
-	if(graph.solutionFile && !graph.dirty) {
-		// force get new version
-		let url = graph.solutionFile + "?time="+ Date.now();
-		Network.get(url).then(response => {
-			console.log("Fetched premade policy:",graph.solutionFile);
-			loadPolicy(div, graph, JSON.parse(response));
-		}).catch(error => {
-			console.error("Error while getting premade policy",
-				graph.solutionFile,":",error);
-			requestNewPolicy(div, graph);
-		});
-	} else {
-		requestNewPolicy(div, graph);
-	}
+
+	let url = graph.fileUrl.slice(0, -5) + ".soln.d/"
+		+ encodeURIComponent(solutionName) + ".json"
+		// Force the browser to get the latest version
+		+ "?time=" + Date.now();
+
+	Network.get(url).then(response => {
+		console.log("Fetched premade policy:", solutionName);
+		loadPolicy(div, graph, JSON.parse(response));
+	}).catch(error => {
+		console.error("Error while getting premade policy",
+			solutionName, ":", error);
+		div.html("");
+		div.append("b").text("Failed to get policy")
+			.style("color","red");
+		div.append("p").text(error)
+			.style("color","red");
+		div.append("div").classed("blockButton", true)
+			.text("Go Back")
+			.on("click", () => selectPolicyView(div, graph));
+	});
 }
 
 
@@ -1047,13 +1056,15 @@ function policySettings(div, graph){
 				requestNewPolicy(...lastRequestedPolicy);
 			});
 	}
+
+	// Saving section
+	div.append("hr").classed("medium", true);
 	let problemDiv = div.append("div");
 	problemDiv.resetDiv = (previousName) => {
 		if (!previousName) {
 			previousName = graph.name;
 		}
 		problemDiv.html("");
-		problemDiv.append("hr").classed("medium", true);
     let saveDiv = problemDiv.append("div").classed("saveDiv", true);
     saveDiv.append("label").text("Name:");
     let problemName = saveDiv.append("input")
@@ -1071,6 +1082,19 @@ function policySettings(div, graph){
 			});
 	};
 	problemDiv.resetDiv();
+
+	// Load solution section
+	if (graph.solutions && graph.solutions.length > 0) {
+		div.append("hr").classed("medium", true);
+		div.append("p").text("Load a pre-made solution:");
+		let list = div.append("div").classed("selectList", true);
+		list.selectAll("div").data(graph.solutions).join("div")
+			.text(solutionName => solutionName)
+			.on("click", solutionName => {
+				cleanUp();
+				getPolicy(div, graph, solutionName);
+			})
+	}
 }
 
 function selectPrioritizedNode(div, graph){
@@ -1257,7 +1281,7 @@ function selectPolicyView(div, graph) {
 		.text(`Deprecated buttons`);
 	div.append("div").classed("blockButton", true)
 		.text("Request Policy From Server")
-		.on("click", () => getPolicy(div, graph));
+		.on("click", () => requestNewPolicy(div, graph));
 	div.append("div").classed("blockButton", true)
 		.text("Synthesize Trivial Policy")
 		.on("click", createTrivialPolicy);

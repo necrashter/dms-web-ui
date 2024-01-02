@@ -205,9 +205,11 @@ fallbackGraph = {
 var graph;
 
 function loadGraphFromServer(g) {
-	return Network.get("graphs/"+g.filename).then(response => {
+	let url = "graphs/" + g.filename;
+	return Network.get(url).then(response => {
 		graph.loadGraph(JSON.parse(response));
-		if(g.solutionFile) graph.solutionFile = "graphs/"+g.solutionFile;
+		graph.fileUrl = url;
+		graph.solutions = g.solutions;
 	}).catch(error => {
 		alert("Failed to get graph data from server:\n"+error);
 	});
