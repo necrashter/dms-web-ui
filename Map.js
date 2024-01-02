@@ -16,7 +16,8 @@ var Settings = {
 const Map = L.map('map', {
 	preferCanvas: true, // improves performance
 	attributionControl: false,
-	zoomControl: false
+	zoomControl: false,
+	zoomSnap: 0,
 }).setView(
 	{ lat: 41.059420776730676, lng: 29.068107604980472 },
 	11
