@@ -199,6 +199,7 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 	}
 })();
 
+var distanceTool = new DistanceMeasuringTool(Map);
 
 var latdiv = document.getElementById("LatLang");
 
@@ -207,7 +208,12 @@ Map.on('mousemove', (event) => {
 	Map.mousePos = [event.latlng.lat, event.latlng.lng];
 	let lat = event.latlng.lat.toFixed(4);
 	let lng = event.latlng.lng.toFixed(4);
-	latdiv.innerHTML = lat + ", " + lng;
+	let html = lat + ", " + lng;
+  distanceTool.onMouseMove(event);
+  if (distanceTool.distance !== null) {
+    html = "Distance: " + distanceTool.distance.toFixed(3) + " km<br/>" + html;
+  }
+  latdiv.innerHTML = html;
 	// Pass the originalEvent
 	//Tooltip.onMouseMove(event.originalEvent);
 });
@@ -218,6 +224,7 @@ Map.on('click', event => {
 	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
 	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
 	console.log("{ \"latlng\": [",lat,",",lng,"]}");
+  distanceTool.onClick(event);
 });
 
 Map.on("contextmenu", event => {
@@ -226,9 +233,13 @@ Map.on("contextmenu", event => {
 		graph.contextMenu(event);
 		ContextMenu.toggle(event.originalEvent);
 	}
+  distanceTool.onContextMenu(event);
 	event.originalEvent.preventDefault();
 });
 
+Map.createPane("distanceTool");
+Map.getPane('distanceTool').style.zIndex = 900;
+Map.getPane('distanceTool').style.pointerEvents = "None";
 Map.createPane("teams");
 Map.getPane('teams').style.zIndex = 801;
 Map.createPane("teamArrows");
