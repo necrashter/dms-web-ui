@@ -103,10 +103,10 @@ function getNodeMarker(node, i) {
 
 var NodeNaming = {
 	name: function(node) {
-		return node.name ? node.name : "#"+node.index;
+		return node.name ? node.name : "["+node.index+"]";
 	},
 	index: function(node) {
-		return "#"+node.index;
+		return "["+node.index+"]";
 	},
 	index1: function(node) {
 		return "#"+(node.index+1);

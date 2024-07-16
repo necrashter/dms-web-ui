@@ -3,7 +3,7 @@ var Settings = {
 	arrows: false,
 	colorized: true,
 	colorizationTarget: "pf",
-	nodeName: "index1", // "name", "index", "index1"
+	nodeName: "name", // "name", "index", "index1"
 	renderTeamArrows: true,
 	renderNextStateInfo: false,
 	renderNodeInfoOnMap: false,
