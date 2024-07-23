@@ -261,6 +261,88 @@ class Graph {
 	}
 
 	/**
+	 * Given a list of node indices, merge the corresponding nodes.
+	 */
+	mergeNodes(indices) {
+		if (indices.length < 2) return; // Nothing to merge if less than 2 nodes
+
+		// Sort indices to handle them in order
+		indices.sort((a, b) => a - b);
+
+		// Create a new node by averaging the lat and lng of the nodes to be merged
+		let newLat = 0;
+		let newLng = 0;
+		let newPf = 0.0;
+		let newName = null;
+		indices.forEach(index => {
+			let node = this.nodes[index];
+			if (!newName && node.name) {
+				newName = node.name;
+			}
+			newLat += node.latlng[0];
+			newLng += node.latlng[1];
+			newPf += node.pf;
+		});
+		newLat /= indices.length;
+		newLng /= indices.length;
+		newPf /= indices.length;
+
+		// Add the new node
+		const newNodeIndex = this.nodes.length;
+		const newNode = {
+			name: newName,
+			latlng: [newLat, newLng],
+			pf: newPf,
+			status: 0,
+		};
+		this.nodes.push(newNode);
+
+		// Adjust branches to point to the new node
+		const branchesToRemove = [];
+		this.branches.forEach((branch, branchIndex) => {
+			const [i0, i1] = branch.nodes;
+			if (indices.includes(i0) && indices.includes(i1)) {
+				// Branch between nodes to be merged, mark it for removal
+				branchesToRemove.push(branchIndex);
+			} else if (indices.includes(i0)) {
+				// Branch connected to a node to be merged, update its node reference
+				branch.nodes[0] = newNodeIndex;
+			} else if (indices.includes(i1)) {
+				// Branch connected to a node to be merged, update its node reference
+				branch.nodes[1] = newNodeIndex;
+			}
+		});
+
+		// Remove branches between merged nodes
+		branchesToRemove.sort((a, b) => b - a).forEach(index => {
+			this.branches.splice(index, 1);
+		});
+
+		// Remove old nodes
+		// Descending sort, inplace
+		indices.sort((a, b) => b - a).forEach(index => {
+			this.nodes.splice(index, 1);
+		});
+
+		// Update branch references due to node index changes
+		this.branches.forEach(branch => {
+			branch.nodes = branch.nodes.map(nodeIndex => {
+				return indices.reduce((acc, oldIndex, i) => {
+					if (nodeIndex > oldIndex) acc--;
+					return acc;
+				}, nodeIndex);
+			});
+		});
+
+		// Update the index field of all nodes
+		this.nodes.forEach((node, i) => {
+			node.index = i;
+		});
+
+		this.rerender();
+	}
+
+	/**
 	 * Event handlers
 	 */
 	setEventHandlers(mode=0) {
