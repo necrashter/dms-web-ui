@@ -670,7 +670,12 @@ class Graph {
 		// add branches
 		for(var i = 0; i<this.branches.length; ++i) {
 			let branch = this.branches[i];
-			let route = branch.nodes.map(j => this.nodes[j].latlng);
+			let route;
+			if (branch.coords) {
+				route = branch.coords;
+			} else {
+				route = branch.nodes.map(j => this.nodes[j].latlng);
+			}
 			let line;
 			let energized = branch.energized;
 			if (!Settings.renderNextState && energized == 2) energized = 0;
