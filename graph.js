@@ -671,7 +671,7 @@ class Graph {
 		for(var i = 0; i<this.branches.length; ++i) {
 			let branch = this.branches[i];
 			let route;
-			if (branch.coords) {
+			if (Settings.enableBranchCoords && branch.coords) {
 				route = branch.coords;
 			} else {
 				route = branch.nodes.map(j => this.nodes[j].latlng);
@@ -1402,6 +1402,10 @@ window.addEventListener("keydown", function(event) {
 			break;
 		case "F2":
 			graph.setMode(1);
+			break;
+		case "F4":
+			Settings.enableBranchCoords = !Settings.enableBranchCoords;
+			graph.rerender();
 			break;
 		default:
 			graph.handleKeyDown(event);

@@ -10,7 +10,8 @@ var Settings = {
 	renderNextState: true,
 	nopf: false,
 	screenshotPad: 0.125,
-  enableGrid: false,
+	enableGrid: false,
+	enableBranchCoords: true,
 }
 
 const Map = L.map('map', {
@@ -183,13 +184,13 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 			.attr("type", "checkbox")
 			.on("change", () => {
 				Settings.enableGrid = checkbox.node().checked;
-        if (Settings.enableGrid) {
-          MapGrid.addTo(Map);
-          if (graph) graph.grid = MapGrid.options.grid;
-        } else {
-          MapGrid.remove(Map);
-          if (graph) graph.grid = null;
-        }
+				if (Settings.enableGrid) {
+					MapGrid.addTo(Map);
+					if (graph) graph.grid = MapGrid.options.grid;
+				} else {
+					MapGrid.remove(Map);
+					if (graph) graph.grid = null;
+				}
 			});
 		checkbox.node().checked = Settings.enableGrid;
 		div.append("label")
@@ -209,11 +210,11 @@ Map.on('mousemove', (event) => {
 	let lat = event.latlng.lat.toFixed(4);
 	let lng = event.latlng.lng.toFixed(4);
 	let html = lat + ", " + lng;
-  distanceTool.onMouseMove(event);
-  if (distanceTool.distance !== null) {
-    html = "Distance: " + distanceTool.distance.toFixed(3) + " km<br/>" + html;
-  }
-  latdiv.innerHTML = html;
+	distanceTool.onMouseMove(event);
+	if (distanceTool.distance !== null) {
+		html = "Distance: " + distanceTool.distance.toFixed(3) + " km<br/>" + html;
+	}
+	latdiv.innerHTML = html;
 	// Pass the originalEvent
 	//Tooltip.onMouseMove(event.originalEvent);
 });
@@ -224,7 +225,7 @@ Map.on('click', event => {
 	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
 	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
 	console.log("{ \"latlng\": [",lat,",",lng,"]}");
-  distanceTool.onClick(event);
+	distanceTool.onClick(event);
 });
 
 Map.on("contextmenu", event => {
@@ -233,7 +234,7 @@ Map.on("contextmenu", event => {
 		graph.contextMenu(event);
 		ContextMenu.toggle(event.originalEvent);
 	}
-  distanceTool.onContextMenu(event);
+	distanceTool.onContextMenu(event);
 	event.originalEvent.preventDefault();
 });
 
@@ -260,11 +261,11 @@ Map.getPane("nodeInfo").style.zIndex = 400;
 // depending on the zoom level
 /*
 Map.on('zoomend', (event) => {
-  if(Map.getZoom() > 16) {
+	if(Map.getZoom() > 16) {
 	Graph.markerLayer.addTo(Map); //multiple consecutive calls have no effect
-  } else {
+	} else {
 	Graph.markerLayer.remove();
-  }
+	}
 });
 */
 
@@ -277,10 +278,10 @@ const MapThemes = {
 	"Default": {
 		colors: {
 			action: "#0000FF",
-				energized: "#24B700",
-				damaged: "#c70039",
-				shadow: "#574f7d",
-				risky: "#FDDC01",
+			energized: "#24B700",
+			damaged: "#c70039",
+			shadow: "#574f7d",
+			risky: "#FDDC01",
 		},
 		css: ""
 	},
@@ -327,12 +328,12 @@ function setMapTheme(name) {
 
 // Set up snapshotter
 const snapshotOptions = {
-  hideElementsWithSelectors: [
-    ".leaflet-control-container",
-    ".leaflet-dont-include-pane",
-    "#snapshot-button"
-  ],
-  hidden: true
+	hideElementsWithSelectors: [
+		".leaflet-control-container",
+		".leaflet-dont-include-pane",
+		"#snapshot-button"
+	],
+	hidden: true
 };
 
 // Add screenshotter to map
