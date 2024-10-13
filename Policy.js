@@ -511,7 +511,7 @@ function loadPolicy(div, graph, policy, options={}) {
 		let ul = d.append("ul");
 		if(options.priorities) {
 			ul.append("li").text("Prioritized nodes: ")
-			.append("ul").selectAll("li").data(options.priorities).join("li")
+				.append("ul").selectAll("li").data(options.priorities).join("li")
 				.text((p,i) => 
 					"Class "+(i+1)+"("+(p.maxmin ? "Maxmin" : "Minmin")+"): "+
 					p.nodes.map(i => getNodeName(graph.nodes[i])).join(", ")
@@ -576,6 +576,10 @@ function saveProblem(div, graph, settings) {
 function requestPolicy(graph, settings) {
 	let request = {
 		graph: graph.serialize(),
+		"timeFunction": {
+			"type": "DirectDistance",
+			"divider": 0.34
+		}
 	};
 	Object.assign(request, settings);
 	return Network.post("/policy", JSON.stringify(request));
@@ -1065,11 +1069,11 @@ function policySettings(div, graph){
 			previousName = graph.name;
 		}
 		problemDiv.html("");
-    let saveDiv = problemDiv.append("div").classed("saveDiv", true);
-    saveDiv.append("label").text("Name:");
-    let problemName = saveDiv.append("input")
-      .attr("type", "text")
-      .property("value", previousName);
+		let saveDiv = problemDiv.append("div").classed("saveDiv", true);
+		saveDiv.append("label").text("Name:");
+		let problemName = saveDiv.append("input")
+			.attr("type", "text")
+			.property("value", previousName);
 		saveDiv.append("div").classed("blockButton", true)
 			.text("Save")
 			.on("click", () => {
