@@ -50,12 +50,14 @@ Icons.crosshair = L.icon({
 
 // graph helper functions
 
-function createEnergizedAntPath(route, nodeStatus=1) {
+function createEnergizedAntPath(route, nodeStatus=1, opacity=1.0) {
 	return L.polyline.antPath(route, {
 		delay: antPathDelay,
 		dashArray: antPathDashArray,
 		color: nodeStatus == 2 ? Colors.action : Colors.energized,
 		pulseColor: "#FFFFFF",
+		// The default opacity for this type of line appears to be ~0.5
+		opacity: opacity * 0.5,
 		weight: lineWeight,
 		smoothFactor: 1,
 		paused: false,
@@ -65,9 +67,10 @@ function createEnergizedAntPath(route, nodeStatus=1) {
 	});
 }
 
-function createEnergizedArrow(route, nodeStatus=1) {
+function createEnergizedArrow(route, nodeStatus=1, opacity=1.0) {
 	return L.polyline(route, {
 		color: nodeStatus == 2 ? Colors.action : Colors.energized,
+		opacity: opacity,
 		weight: lineWeight,
 		smoothFactor: 1,
 		pane: "nodes"
@@ -178,6 +181,7 @@ class Graph {
 		// nodes need to know their indexes
 		this.nodes.forEach((node, i) => {
 			node.index = i;
+			node.partitioned = false;
 		});
 		BottomRightPanel.classList.add("hidden");
 		if(g.view && g.zoom) {
@@ -756,15 +760,21 @@ class Graph {
 			if (!Settings.renderNextState && energized == 2) energized = 0;
 				//this.nodes[branch.nodes[0]].status > 0 &&
 				//	this.nodes[branch.nodes[1]].status > 0;
+			let opacity = 1.0;
+			if (this.nodes[branch.nodes[0]].partitioned ||
+					this.nodes[branch.nodes[1]].partitioned) {
+				opacity = 0.5;
+			}
 			if (energized) {
 				if(this.mode == 0 && Settings.animateAnts) {
-					line = createEnergizedAntPath(route, energized);
+					line = createEnergizedAntPath(route, energized, opacity);
 				} else {
-					line = createEnergizedArrow(route, energized);
+					line = createEnergizedArrow(route, energized, opacity);
 				}
 			} else {
 				line = L.polyline(route, {
 					color: Colors.shadow,
+					opacity: opacity,
 					weight: lineWeight,
 					smoothFactor: 1,
 					pane: branchMode
@@ -791,6 +801,7 @@ class Graph {
 				this.nodes[branch.node].latlng
 			], {
 				color: lineColor,
+				opacity: this.nodes[branch.node].partitioned ? 0.5 : 1.0,
 				weight: lineWeight,
 				smoothFactor: 1,
 				pane: branchMode
@@ -817,10 +828,12 @@ class Graph {
 				color = Colors.damaged;
 			}
 
+			let opacity = node.partitioned ? 0.5 : 1.0;
 			let circle = L.circleMarker(latlng, {
 				color: Colors.shadow,
 				fillColor: color,
-				fillOpacity: 1.0,
+				fillOpacity: opacity,
+				opacity: opacity,
 				radius: nodeRadius,
 				weight: nodeWeight,
 				pane: "nodes"
@@ -1296,18 +1309,30 @@ class Graph {
 				+this.nodes.length);
 		}
 		for(let i=0; i<state.length; ++i) {
+			let node = this.nodes[i];
 			switch(state[i]) {
 				case "D":
-					this.nodes[i].status = -1;
+					node.status = -1;
+					node.partitioned = false;
 					break;
 				case "U":
-					this.nodes[i].status = 0;
+					node.status = 0;
+					node.partitioned = false;
+					break;
+				case "-":
+					// Partitioned away, keep the same state.
+					// Clear action selection (blue)
+					if(node.status == 2)
+						node.status = 1;
+					node.partitioned = true;
 					break;
 				default:
-					if(this.nodes[i].status > 0)
-						this.nodes[i].status = 1;
+					// Any energy source.
+					if(node.status > 0)
+						node.status = 1;
 					else
-						this.nodes[i].status = 2;
+						node.status = 2;
+					node.partitioned = false;
 			}
 		}
 	}
@@ -1383,7 +1408,7 @@ class Graph {
 			lastEnergizedBranches = [];
 			let queue = [];
 			for (let i = 0; i < s.length; ++i) {
-				if (lastState[i] != s[i]) {
+				if (lastState[i] != s[i] && s[i] != "-") {
 					if (s[i] == "D" || externallyConnected[i]) {
 						// Damaged, no need to update nearby branches.
 						// Connected to an energy source, external branch is already updated.
