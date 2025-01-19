@@ -1355,6 +1355,7 @@ class Graph {
 				}
 			}
 			while (queue.length > 0) {
+				let startLength = queue.length;
 				for (let qi = queue.length - 1; qi >= 0; --qi) {
 					let target = queue[qi];
 					// Find a suitable source node.
@@ -1368,7 +1369,6 @@ class Graph {
 						}
 					}
 					// No source found, we need to energize others first.
-					// NOTE: This may loop infinitely if the input is broken.
 					if (source == null) continue;
 					// Energize the relevant branch.
 					for(let b of this.nodes[target].branches) {
@@ -1387,6 +1387,11 @@ class Graph {
 					queue.splice(qi, 1);
 					// Update last state for the next iteration.
 					lastState[target] = s[target];
+				}
+				if (queue.length == startLength) {
+					// We didn't remove any items from the queue.
+					// Source branch could not be determined; the input may be erroneous.
+					break;
 				}
 			}
 			// lastState == s must hold at this point.
