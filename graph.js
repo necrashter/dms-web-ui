@@ -343,8 +343,61 @@ class Graph {
 	}
 
 	mergeBestByMaxDistance(maxDistance) {
-		let bestDistance = 0.0;
+		let bestDistance = Infinity;
 		let best = null;
+		let adjList = this.nodes.map(() => []);
+
+		let minFirst = true;
+		let comp;
+		if (minFirst) {
+			comp = (a, b) => a < b;
+		} else {
+			comp = (a, b) => a > b;
+			bestDistance = -bestDistance;
+		}
+
+		this.branches.forEach(branch => {
+			let a = branch.nodes[0];
+			let b = branch.nodes[1];
+			adjList[a].push(b);
+			adjList[b].push(a);
+		});
+
+		for (let index = 0; index < this.nodes.length; ++index) {
+			adjList[index].forEach(other => {
+				let list = [index, other];
+				let current = other;
+				let distance = earthDistance(this.nodes[index].latlng, this.nodes[other].latlng);
+				if (distance > maxDistance) return;
+				//while (true) {
+				//	let nexts = adjList[current].filter(i => !list.includes(i));
+				//	if (nexts.length != 1) break;
+				//	let next = nexts[0];
+				//	let addedDist = earthDistance(this.nodes[current].latlng, this.nodes[next].latlng);
+				//	if (distance + addedDist <= maxDistance) {
+				//		list.push(next);
+				//		distance += addedDist;
+				//	} else {
+				//		break;
+				//	}
+				//}
+				if (comp(distance, bestDistance)) {
+					best = list;
+					bestDistance = distance;
+				}
+			});
+		}
+
+		if (best) {
+			console.log(bestDistance)
+			this.mergeNodes(best);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	removeRadial() {
 		let adjList = this.nodes.map(() => []);
 
 		this.branches.forEach(branch => {
@@ -355,38 +408,13 @@ class Graph {
 		});
 
 		for (let index = 0; index < this.nodes.length; ++index) {
-			if (adjList[index].length > 2) continue;
-			adjList[index].forEach(other => {
-				if (adjList[other].length > 2) return;
-				let list = [index, other];
-				let current = other;
-				let distance = earthDistance(this.nodes[index].latlng, this.nodes[other].latlng);
-				if (distance > maxDistance) return;
-				while (true) {
-					let nexts = adjList[current].filter(i => !list.includes(i));
-					if (nexts.length != 1) break;
-					let next = nexts[0];
-					let addedDist = earthDistance(this.nodes[current].latlng, this.nodes[next].latlng);
-					if (distance + addedDist <= maxDistance) {
-						list.push(next);
-						distance += addedDist;
-					} else {
-						break;
-					}
-				}
-				if (distance > bestDistance) {
-					best = list;
-					bestDistance = distance;
-				}
-			});
+			if (adjList[index].length < 2) {
+				this.removeNodeIndex(index);
+				return true;
+			}
 		}
 
-		if (best) {
-			this.mergeNodes(best);
-			return true;
-		} else {
-			return false;
-		}
+		return false;
 	}
 
 	/**

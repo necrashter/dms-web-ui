@@ -8,6 +8,7 @@ var Settings = {
 	renderNextStateInfo: false,
 	renderNodeInfoOnMap: false,
 	renderNextState: true,
+	// Don't render Pf info on map when renderNodeInfoOnMap is enabled
 	nopf: false,
 	screenshotPad: 0.125,
 	enableGrid: false,
