@@ -31,7 +31,10 @@ BottomRightPanel.hide = function() {
 function createTextInput(target, name, value) {
 	let div = target.append("div");
 	div.append("label").attr("for", name).text(name+":");
-	let input = div.append("input").attr("type", "text").property("value", value);
+	let input = div.append("input").attr("type", "text");
+	if (value !== undefined) {
+		input.property("value", value);
+	}
 	return input;
 }
 

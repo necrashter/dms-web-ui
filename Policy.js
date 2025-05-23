@@ -1,6 +1,5 @@
 
 var policyView = null;
-const defaultHorizon = 30;
 
 const ACTION_OFFSET = 0;//-1;
 
@@ -677,7 +676,7 @@ function policySettings(div, graph){
 	selectTab(0);
 
 	// GENERAL
-	let horizon = createTextInput(tabs[0], "Horizon", defaultHorizon);
+	let horizon = createTextInput(tabs[0], "Horizon");
 	let benchmark_enabled = false;
 	createCheckbox(tabs[0], "Benchmark", val => {
 		benchmark_enabled = val;
@@ -1104,7 +1103,7 @@ function policySettings(div, graph){
 function selectPrioritizedNode(div, graph){
 	div.html("");
 	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
-	let horizon = createTextInput(div, "Horizon", defaultHorizon);
+	let horizon = createTextInput(div, "Horizon");
 	let errorDiv = div.append("p").text("")
 		.style("color", "red");
 	let algorithms = [
@@ -1229,7 +1228,7 @@ function selectPrioritizedNode(div, graph){
 function selectPolicyOptions(div, graph){
 	div.html("");
 	div.style("opacity", 0).transition().duration(500).style("opacity", 1);
-	let horizon = createTextInput(div, "Horizon", defaultHorizon);
+	let horizon = createTextInput(div, "Horizon");
 	let shortSighted = false;
 	createCheckbox(div, "Short-sighted", val => {
 		shortSighted = val;
