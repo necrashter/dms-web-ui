@@ -1023,9 +1023,33 @@ class Graph {
 	}
 	addNode(position) {
 		let newNode = {
-			"latlng": position
+			latlng: position,
+			pf: 0.5,
+			status: 0,
+			partitioned: false,
+			index: this.nodes.length,
 		}
 		this.nodes.push(newNode);
+	}
+	removeNodeIndex(i) {
+		this.nodes.splice(i, 1);
+		this.branches = this.branches.filter(b => {
+			return !b.nodes.includes(i);
+		});
+		// decrease the indexes of following nodes
+		this.branches.forEach((b) => {
+			b.nodes = b.nodes.map(n =>
+				n > i ? n-1 : n
+			);
+		});
+		this.externalBranches = this.externalBranches.filter(b => b.node != i);
+		this.externalBranches.forEach((b) => {
+			if(b.node > i) b.node--;
+		});
+		// Update indices
+		this.nodes.forEach((node, i) => {
+			node.index = i;
+		});
 	}
 	removeElement(victim) {
 		let i;
@@ -1033,20 +1057,7 @@ class Graph {
 		switch(victim.type) {
 			case "node":
 				i = this.nodes.indexOf(data);
-				this.nodes.splice(i, 1);
-				this.branches = this.branches.filter(b => {
-					return !b.nodes.includes(i);
-				});
-				// decrease the indexes of following nodes
-				this.branches.forEach((b) => {
-					b.nodes = b.nodes.map(n =>
-						n > i ? n-1 : n
-					);
-				});
-				this.externalBranches = this.externalBranches.filter(b => b.node != i);
-				this.externalBranches.forEach((b) => {
-					if(b.node > i) b.node--;
-				});
+				this.removeNodeIndex(i);
 				return true;
 			case "resource":
 				i = this.resources.indexOf(data);
