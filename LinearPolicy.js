@@ -145,7 +145,7 @@ class LinearPolicyView {
 			});
 		}
 		this.markerLayer = L.layerGroup(this.markers);
-		//this.markerLayer.addTo(Map);
+		//this.markerLayer.addTo(mainMap);
 	}
 	policyNavigator() {
 		this.div.html("");
@@ -208,14 +208,14 @@ class LinearPolicyView {
 				.attr("type", "checkbox")
 				.on("change", () => {
 					if(checkbox.node().checked)
-						this.markerLayer.addTo(Map);
+						this.markerLayer.addTo(mainMap);
 					else
 						this.markerLayer.remove();
 				})
 				.property("checked", this.markerLayer._map != null);
 			div.append("label")
 				.attr("for", "showNums")
-				.text("Show Numbers on Map");
+				.text("Show Numbers on mainMap");
 		}
 		this.div.append("div").classed("blockButton", true)
 			.text("Convert to Interactive Mode")

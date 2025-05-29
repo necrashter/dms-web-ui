@@ -221,7 +221,7 @@ function loadGraphFromServer(g) {
  * graph must be cleared and null before calling this function.
  */
 function openSelectGraph() {
-	graph = new Graph(Map);
+	graph = new Graph(mainMap);
 	Network.get("/get-graphs").then(response => {
 		let fileList = JSON.parse(response);
 		console.log(fileList);

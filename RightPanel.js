@@ -104,6 +104,6 @@ function selectGraph(dirlist, prebody=null) {
 		}
 	}
 	content.transition().duration(300).style("opacity", 1);
-	markerLayer.addTo(Map);
+	markerLayer.addTo(mainMap);
 }
 

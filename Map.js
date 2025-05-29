@@ -14,8 +14,8 @@ var Settings = {
 	enableBranchCoords: true,
 }
 
-const Map = L.map('map', {
-	preferCanvas: true, // improves performance
+const mainMap = L.map('map', {
+	//preferCanvas: true, // improves performance
 	attributionControl: false,
 	zoomControl: false,
 	zoomSnap: 0,
@@ -24,7 +24,7 @@ const Map = L.map('map', {
 	11
 );
 
-const MapGrid = L.grid();
+const mapGrid = L.grid();
 
 const NoMap = L.tileLayer('assets/WhiteBackground.jpg', {
 	maxZoom: 19,
@@ -63,7 +63,7 @@ function selectMap(name) {
 	if(selectedBaseMap) {
 		baseMaps[selectedBaseMap].remove();
 	}
-	baseMaps[name].addTo(Map).bringToBack();
+	baseMaps[name].addTo(mainMap).bringToBack();
 	selectedBaseMap = name;
 }
 
@@ -185,10 +185,10 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 			.on("change", () => {
 				Settings.enableGrid = checkbox.node().checked;
 				if (Settings.enableGrid) {
-					MapGrid.addTo(Map);
-					if (graph) graph.grid = MapGrid.options.grid;
+					mapGrid.addTo(mainMap);
+					if (graph) graph.grid = mapGrid.options.grid;
 				} else {
-					MapGrid.remove(Map);
+					mapGrid.remove(mainMap);
 					if (graph) graph.grid = null;
 				}
 			});
@@ -200,13 +200,13 @@ var TopRightPanel = document.getElementById("TopRightPanel");
 	}
 })();
 
-var distanceTool = new DistanceMeasuringTool(Map);
+var distanceTool = new DistanceMeasuringTool(mainMap);
 
 var latdiv = document.getElementById("LatLang");
 
 //var mouseLat
-Map.on('mousemove', (event) => {
-	Map.mousePos = [event.latlng.lat, event.latlng.lng];
+mainMap.on('mousemove', (event) => {
+	mainMap.mousePos = [event.latlng.lat, event.latlng.lng];
 	let lat = event.latlng.lat.toFixed(4);
 	let lng = event.latlng.lng.toFixed(4);
 	let html = lat + ", " + lng;
@@ -220,7 +220,7 @@ Map.on('mousemove', (event) => {
 });
 
 
-Map.on('click', event => {
+mainMap.on('click', event => {
 	// NOTE: This fires even if user clicks on a marker
 	let lat = Math.round(event.latlng.lat*10000.0)/10000.0;
 	let lng = Math.round(event.latlng.lng*10000.0)/10000.0;
@@ -228,7 +228,7 @@ Map.on('click', event => {
 	distanceTool.onClick(event);
 });
 
-Map.on("contextmenu", event => {
+mainMap.on("contextmenu", event => {
 	console.log("contextmenu")
 	if(graph) {
 		graph.contextMenu(event);
@@ -238,31 +238,35 @@ Map.on("contextmenu", event => {
 	event.originalEvent.preventDefault();
 });
 
-Map.createPane("distanceTool");
-Map.getPane('distanceTool').style.zIndex = 900;
-Map.getPane('distanceTool').style.pointerEvents = "None";
-Map.createPane("teams");
-Map.getPane('teams').style.zIndex = 801;
-Map.createPane("teamArrows");
-Map.getPane('teamArrows').style.zIndex = 800;
-Map.getPane('teamArrows').style.pointerEvents = "None";
-Map.createPane("resources");
-Map.getPane('resources').style.zIndex = 700;
-Map.createPane("nodes");
-Map.getPane('nodes').style.zIndex = 650;
-Map.createPane("branches");
-Map.getPane('branches').style.zIndex = 450;
-Map.createPane("nodeInfo");
-Map.getPane("nodeInfo").style.zIndex = 400;
-//Map.getPane('branches').style.pointerEvents = "none";
+mainMap.createPane("areas");
+mainMap.getPane('areas').style.zIndex = 300;
+mainMap.getPane('areas').style.pointerEvents = "None";
+mainMap.getPane('areas').style.opacity = 0.5;
+mainMap.createPane("distanceTool");
+mainMap.getPane('distanceTool').style.zIndex = 900;
+mainMap.getPane('distanceTool').style.pointerEvents = "None";
+mainMap.createPane("teams");
+mainMap.getPane('teams').style.zIndex = 801;
+mainMap.createPane("teamArrows");
+mainMap.getPane('teamArrows').style.zIndex = 800;
+mainMap.getPane('teamArrows').style.pointerEvents = "None";
+mainMap.createPane("resources");
+mainMap.getPane('resources').style.zIndex = 700;
+mainMap.createPane("nodes");
+mainMap.getPane('nodes').style.zIndex = 650;
+mainMap.createPane("branches");
+mainMap.getPane('branches').style.zIndex = 450;
+mainMap.createPane("nodeInfo");
+mainMap.getPane("nodeInfo").style.zIndex = 400;
+//mainMap.getPane('branches').style.pointerEvents = "none";
 
 
 // this function can be used to add some layers
 // depending on the zoom level
 /*
-Map.on('zoomend', (event) => {
-	if(Map.getZoom() > 16) {
-	Graph.markerLayer.addTo(Map); //multiple consecutive calls have no effect
+mainMap.on('zoomend', (event) => {
+	if(mainMap.getZoom() > 16) {
+	Graph.markerLayer.addTo(mainMap); //multiple consecutive calls have no effect
 	} else {
 	Graph.markerLayer.remove();
 	}
@@ -322,7 +326,7 @@ function setMapTheme(name) {
 
 // L.simpleMapScreenshoter({
 //    cropImageByInnerWH: true, // crop blank opacity from image borders
-// }).addTo(Map);
+// }).addTo(mainMap);
 
 
 
@@ -338,12 +342,12 @@ const snapshotOptions = {
 
 // Add screenshotter to map
 const screenshotter = L.simpleMapScreenshoter(snapshotOptions);
-screenshotter.addTo(Map);
+screenshotter.addTo(mainMap);
 
 function takeScreenshot() {
 	// Get bounds of features
 	let featureBounds = null;
-	Map.eachLayer(layer => {
+	mainMap.eachLayer(layer => {
 		if (layer instanceof L.FeatureGroup) {
 			if (featureBounds)
 				featureBounds.extend(layer.getBounds());
@@ -355,15 +359,15 @@ function takeScreenshot() {
 		// Add padding
 		featureBounds = featureBounds.pad(Settings.screenshotPad);
 	} else {
-		featureBounds = Map.getBounds();
+		featureBounds = mainMap.getBounds();
 	}
 
 	// Get pixel position on screen of top left and bottom right
 	// of the bounds of the feature
 	const nw = featureBounds.getNorthWest();
 	const se = featureBounds.getSouthEast();
-	const topLeft = Map.latLngToContainerPoint(nw);
-	const bottomRight = Map.latLngToContainerPoint(se);
+	const topLeft = mainMap.latLngToContainerPoint(nw);
+	const bottomRight = mainMap.latLngToContainerPoint(se);
 
 	// Get the resulting image size that contains the feature
 	const imageSize = bottomRight.subtract(topLeft);

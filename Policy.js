@@ -695,7 +695,7 @@ function policySettings(div, graph){
 			if(teams.length == 10) {
 				return;
 			}
-			let pos = Map.getCenter();
+			let pos = mainMap.getCenter();
 			teams.push({
 				latlng: [
 					pos.lat - 0.025 + 0.05 * Math.random(),
@@ -819,7 +819,7 @@ function policySettings(div, graph){
 			return m;
 		});
 		teamMarkerLayer = L.featureGroup(teamMarkers);
-		teamMarkerLayer.addTo(Map);
+		teamMarkerLayer.addTo(mainMap);
 	};
 	selectTeam(null, -1);
 
@@ -987,7 +987,7 @@ function policySettings(div, graph){
 			return m;
 		});
 		nodeMarkerLayer = L.featureGroup(nodeMarkers);
-		nodeMarkerLayer.addTo(Map);
+		nodeMarkerLayer.addTo(mainMap);
 	};
 	selectPriorityClass(null, -1);
 
@@ -1159,7 +1159,7 @@ function selectPrioritizedNode(div, graph){
 			return m;
 		});
 		markerLayer = L.featureGroup(markers);
-		markerLayer.addTo(Map);
+		markerLayer.addTo(mainMap);
 	};
 	let selectFun = (_, i) => {
 		if(i in priorities) {
@@ -1394,7 +1394,7 @@ class InteractivePolicyView {
 			m.tooltipInfo = info;
 			m.on("mouseover", this.teamOnMouseOver.bind(this));
 			m.on("mouseout", Tooltip.hide.bind(Tooltip));
-			m.addTo(Map);
+			m.addTo(mainMap);
 			this.teamMarkers[i] = m;
 			m._icon.addEventListener("transitionend", () => {
 				m._icon.style.transition = '';
@@ -1416,7 +1416,7 @@ class InteractivePolicyView {
 				}
 			}
 			this.markerLayer = L.featureGroup(this.markers);
-			this.markerLayer.addTo(Map);
+			this.markerLayer.addTo(mainMap);
 			return;
 		}
 		if(Settings.renderNextStateInfo) {
@@ -1444,7 +1444,7 @@ class InteractivePolicyView {
 			}
 		}
 		this.markerLayer = L.featureGroup(this.markers);
-		this.markerLayer.addTo(Map);
+		this.markerLayer.addTo(mainMap);
 	}
 	policyNavigator() {
 		let detailsOpen = false;
