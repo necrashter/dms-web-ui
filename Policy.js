@@ -574,7 +574,8 @@ function saveProblem(div, graph, settings) {
 
 function requestPolicy(graph, settings) {
 	let request = {
-		graph: graph.serialize(),
+		// Serialize with merged groups:
+		graph: graph.serialize(true),
 		"timeFunction": {
 			"type": "DirectDistance",
 			"divider": 0.34

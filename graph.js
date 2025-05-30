@@ -166,11 +166,13 @@ class Graph {
 		this.name = "unnamed"
 		Object.assign(this, options);
 		this.setEventHandlers();
+		this.colorGen = new ColorGenerator();
 	}
 	/**
 	 * Loads the graph data and renders.
 	 */
 	loadGraph(g) {
+		this.colorGen.reset();
 		this.requiredFields.forEach(field => {
 			if(g[field]) {
 				this[field] = g[field];
@@ -188,6 +190,7 @@ class Graph {
 			this.map.flyTo(g.view, g.zoom);
 		}
 		this.dirty = false;
+		this.updateGroups();
 		this.rerender();
 	}
 	readFile(event) {
@@ -229,23 +232,29 @@ class Graph {
 	/**
 	 * Converts the graph into a serialized object, ready to stringify
 	 */
-	serialize() {
+	serialize(mergeGroups=false) {
 		let g = {};
 		g.name = this.name;
-		g.nodes = this.nodes.map(n => {
-			return {
+		let [nodes, branches, externalBranches] = mergeGroups ?
+			this.collapseGroups(true) : [this.nodes, this.branches, this.externalBranches];
+		g.nodes = nodes.map(n => {
+			let n2 = {
 				latlng: n.latlng,
 				pf: n.pf,
 				name: n.name,
 				status: n.status ? n.status : 0
 			};
+			if ("group" in n) {
+				n2.group = n.group;
+			}
+			return n2;
 		});
-		g.branches = this.branches.map(b => {
+		g.branches = branches.map(b => {
 			return {
 				nodes: b.nodes,
 			};
 		});
-		g.externalBranches = this.externalBranches;
+		g.externalBranches = externalBranches;
 		g.resources = this.resources;
 		g.view = this.map.getCenter();
 		g.zoom = this.map.getZoom();
@@ -262,6 +271,129 @@ class Graph {
 		if(!filename) filename = "graph"+saveCount+".json";
 		downloadData(filename, this.getJson());
 		saveCount++;
+	}
+	
+	/**
+	 * Update this.groups from node group info.
+	 */
+	updateGroups() {
+		this.groups = {}
+		for (const node of this.nodes) {
+			if ("group" in node) {
+				if (node.group in this.groups) {
+					this.groups[node.group].nodes.push(node);
+				} else {
+					this.groups[node.group] = {
+						nodes: [node],
+						collapsed: false,
+						color: rgbToHex(this.colorGen.generate()),
+					};
+				}
+			}
+		}
+		// Mapping from collapsed node indices to uncollapsed nodes.
+		let singleNodes = [];
+		let groupedNodes = [];
+		let seenGroups = {};
+		for (const node of this.nodes) {
+			if ("group" in node) {
+				if (!(node.group in seenGroups)) {
+					groupedNodes.push(this.groups[node.group].nodes);
+					seenGroups[node.group] = true;
+				}
+			} else {
+				singleNodes.push([node]);
+			}
+		}
+		this.collapsedNodes = singleNodes.concat(groupedNodes);
+	}
+	/**
+	 * Collapse the groups based on their collapsed field.
+	 */
+	collapseGroups(collapseAll=false) {
+		let myNodes = this.nodes.slice();
+		let myBranches = structuredClone(this.branches);
+		let myExternalBranches = structuredClone(this.externalBranches);
+		let oldToNew = {};
+
+		for (const groupName in this.groups) {
+			const group = this.groups[groupName];
+			if (group.collapsed || collapseAll) {
+				const newNodeIndex = myNodes.length;
+				let partitioned = false;
+				let [newLat, newLng, newPf] = [0.0, 0.0, 0.0];
+				let status = null;
+				for (let n of group.nodes) {
+					newLat += n.latlng[0];
+					newLng += n.latlng[1];
+					newPf += n.pf;
+					oldToNew[n.index] = newNodeIndex;
+					partitioned = partitioned || n.partitioned;
+					status = n.status;
+				}
+				newLat /= group.nodes.length;
+				newLng /= group.nodes.length;
+				newPf /= group.nodes.length;
+				// Add the new node
+				const newName = Number.isInteger(groupName) ? ("Group #" + groupName) : groupName;
+				const newNode = {
+					name: newName,
+					latlng: [newLat, newLng],
+					pf: newPf,
+					status: status,
+					group: groupName,
+					collapsed: true,
+					partitioned: partitioned,
+				};
+				myNodes.push(newNode);
+			}
+		}
+
+		// Adjust branches to point to the new node
+		const branchesToRemove = [];
+		myBranches.forEach((branch, branchIndex) => {
+			const [i0, i1] = branch.nodes;
+			if (i0 in oldToNew && i1 in oldToNew) {
+				// Branch between nodes to be merged, mark it for removal
+				branchesToRemove.push(branchIndex);
+			} else if (i0 in oldToNew) {
+				// Branch connected to a node to be merged, update its node reference
+				branch.nodes[0] = oldToNew[i0];
+			} else if (i1 in oldToNew) {
+				// Branch connected to a node to be merged, update its node reference
+				branch.nodes[1] = oldToNew[i1];
+			}
+		});
+
+		for (let e of myExternalBranches) {
+			if (e.node in oldToNew) {
+				e.node = oldToNew[e.node];
+			}
+		}
+
+		// Remove branches between merged nodes
+		branchesToRemove.sort((a, b) => b - a).forEach(index => {
+			myBranches.splice(index, 1);
+		});
+
+		// Remove old nodes
+		// Descending sort, inplace
+		const oldIndices = Object.keys(oldToNew).sort((a, b) => b - a);
+		oldIndices.forEach(index => {
+			myNodes.splice(index, 1);
+		});
+
+		// Update branch references due to node index changes
+		myBranches.forEach(branch => {
+			branch.nodes = branch.nodes.map(nodeIndex => {
+				return oldIndices.reduce((acc, oldIndex, i) => {
+					if (nodeIndex > oldIndex) acc--;
+					return acc;
+				}, nodeIndex);
+			});
+		});
+
+		return [myNodes, myBranches, myExternalBranches];
 	}
 
 	/**
@@ -440,7 +572,7 @@ class Graph {
 		this.lastHover.data = event.target.node;
 		this.lastHover.pos = event.target._latlng;
 		this.lastHover.hovered = true;
-		event.target.setRadius(nodeRadius*1.25);
+		event.target.setRadius(event.target.getRadius() + 2);
 		let node = event.target.node;
 		let pf = node.pf;
 		let status;
@@ -451,16 +583,28 @@ class Graph {
 		}
 		// Lat: ${Math.round(10000*event.target._latlng.lat)/10000} <br/>
 		// Lng: ${Math.round(10000*event.target._latlng.lng)/10000}
-		Tooltip.div.innerHTML =
-			`<b>${getNodeName(node)}</b> <br/>
-			  Status: ${status} <br/>
+		let generatedHtml = `
+			<b>${getNodeName(node)}</b> <br/>
+			Status: ${status} <br/>
 			P<sub>f</sub>: ${pf != null ? pf.toFixed(3) : "Unknown"}
 		`;
+		if ("group" in node) {
+			generatedHtml += "<br/>Group: " + node.group;
+			if (node.collapsed) {
+				generatedHtml += `<br/>Represents ${this.groups[node.group].nodes.length} nodes`;
+			}
+		}
+		Tooltip.div.innerHTML = generatedHtml;
 		Tooltip.show(event.originalEvent);
 	}
 	nodeOnMouseOut (event) {
 		this.lastHover.hovered = false;
-		event.target.setRadius(nodeRadius);
+		event.target.setRadius(event.target.getRadius() - 2);
+		Tooltip.hide();
+	}
+	// Should be called when the tooltip target no longer exists.
+	invalidateTooltip() {
+		this.lastHover = { type: null, data: null, hovered: false };
 		Tooltip.hide();
 	}
 	showNodeInfo(node) {
@@ -724,12 +868,6 @@ class Graph {
 	 * Renders the this.nodes into new layers
 	 */
 	render (map) {
-		this.nodes.forEach(node => {
-			// holds the branch elements displayed on map
-			node.branches = [];
-			// holds the branch elements that connect to DERs
-			node.externalBranches = [];
-		});
 		this.riskyNodes = [];
 		if(this.blinkTimer) clearTimeout(this.blinkTimer);
 		var markers = [];
@@ -739,6 +877,7 @@ class Graph {
 		var resourceMarkers = [];
 		var decorators = [];
 		var nodeInfos = [];
+		var areaPolygons = [];
 		const branchMode = this.mode == 0 ? "branches" : "nodes";
 		let pfInterpolator;
 		if(Settings.colorized) 
@@ -746,14 +885,40 @@ class Graph {
 		else
 			pfInterpolator = (_) => Colors.shadow;
 
+		// Process this.branches considering the merged nodes
+		const [myNodes, myBranches, myExternalBranches] = this.collapseGroups();
+
+		for (const group of Object.values(this.groups)) {
+			if (!group.collapsed) {
+				let polyPoints = group.nodes.map(c => c.latlng);
+				areaPolygons.push(L.polygon(
+					sortPointsPolygon(polyPoints),
+					{
+						weight: 40,
+						color: group.color,
+						opacity: 1.0,
+						fillColor: group.color,
+						fillOpacity: 1.0,
+						pane: "areas",
+					},
+				));
+			}
+		}
+
+		for (let node of myNodes) {
+			// holds the branch elements displayed on map
+			node.branches = [];
+			// holds the branch elements that connect to DERs
+			node.externalBranches = [];
+		}
+
 		// add branches
-		for(var i = 0; i<this.branches.length; ++i) {
-			let branch = this.branches[i];
+		for (let branch of myBranches) {
 			let route;
 			if (Settings.enableBranchCoords && branch.coords) {
 				route = branch.coords;
 			} else {
-				route = branch.nodes.map(j => this.nodes[j].latlng);
+				route = branch.nodes.map(j => myNodes[j].latlng);
 			}
 			let line;
 			let energized = branch.energized;
@@ -761,8 +926,8 @@ class Graph {
 				//this.nodes[branch.nodes[0]].status > 0 &&
 				//	this.nodes[branch.nodes[1]].status > 0;
 			let opacity = 1.0;
-			if (this.nodes[branch.nodes[0]].partitioned ||
-					this.nodes[branch.nodes[1]].partitioned) {
+			if (myNodes[branch.nodes[0]].partitioned ||
+					myNodes[branch.nodes[1]].partitioned) {
 				opacity = 0.5;
 			}
 			if (energized) {
@@ -788,20 +953,19 @@ class Graph {
 			line.on("click", this.branchOnClick.bind(this));
 			line.on("mouseout", this.branchOnMouseOut.bind(this));
 			branches.push(line);
-			this.nodes[branch.nodes[0]].branches.push(line);
-			this.nodes[branch.nodes[1]].branches.push(line);
+			myNodes[branch.nodes[0]].branches.push(line);
+			myNodes[branch.nodes[1]].branches.push(line);
 		}
 		// add external branches
-		for(var i = 0; i<this.externalBranches.length; ++i) {
-			let branch = this.externalBranches[i];
+		for(const branch of myExternalBranches) {
 			let lineColor = (branch.status>0) ? Colors.energized :
 				(branch.status===0) ? Colors.shadow : Colors.damaged;
 			let line = L.polyline( [ //coordinates
 				this.resources[branch.source].latlng,
-				this.nodes[branch.node].latlng
+				myNodes[branch.node].latlng
 			], {
 				color: lineColor,
-				opacity: this.nodes[branch.node].partitioned ? 0.5 : 1.0,
+				opacity: myNodes[branch.node].partitioned ? 0.5 : 1.0,
 				weight: lineWeight,
 				smoothFactor: 1,
 				pane: branchMode
@@ -811,11 +975,11 @@ class Graph {
 			line.on("mouseover", this.externalBranchOnMouseOver.bind(this));
 			line.on("mouseout", this.externalBranchOnMouseOut.bind(this));
 			externalBranches.push(line);
-			this.nodes[branch.node].externalBranches.push(line);
+			myNodes[branch.node].externalBranches.push(line);
 		}
 		// add nodes
-		for(var i = 0; i<this.nodes.length; ++i) {
-			let node = this.nodes[i];
+		for (let node of myNodes) {
+			if (node.childExpand) continue;
 			let latlng = node.latlng;
 			let color = pfInterpolator(node[Settings.colorizationTarget]);
 			if(node.status>0) {
@@ -829,12 +993,13 @@ class Graph {
 			}
 
 			let opacity = node.partitioned ? 0.5 : 1.0;
+			let radius = node.collapsed ? nodeRadius*2.0 : nodeRadius;
 			let circle = L.circleMarker(latlng, {
 				color: Colors.shadow,
 				fillColor: color,
 				fillOpacity: opacity,
 				opacity: opacity,
-				radius: nodeRadius,
+				radius: radius,
 				weight: nodeWeight,
 				pane: "nodes"
 			});
@@ -881,6 +1046,7 @@ class Graph {
 
 		let allMarkers = [].concat(
 			markers,
+			areaPolygons,
 			resourceMarkers,
 			circles,
 			branches,
@@ -1135,10 +1301,25 @@ class Graph {
 		
 	}
 	handleKeyDown(event) {
-    if (this.grid && this.map.mousePos) {
-      this.grid.snap(this.map.mousePos);
-    }
-		if(this.mode == 1) {
+		if (this.grid && this.map.mousePos) {
+			this.grid.snap(this.map.mousePos);
+		}
+		if(this.mode == 0) {
+			switch(event.key) {
+				case " ":
+					if (!this.lastHover.hovered || this.lastHover.type !== "node") break;
+					let node = this.lastHover.data;
+					if ("group" in node) {
+						let group = this.groups[node.group];
+						group.collapsed = !node.collapsed;
+						this.rerender();
+						this.invalidateTooltip();
+					}
+					break;
+				default:
+					break;
+			}
+		} else {
 			switch(event.key) {
 				case "a":
 					if(!this.map.mousePos) return;
@@ -1187,6 +1368,7 @@ class Graph {
 					if(this.lastHover.hovered) {
 						if(this.removeElement(this.lastHover)) {
 							this.rerender();
+							this.invalidateTooltip();
 						}
 					}
 					break;
@@ -1304,35 +1486,48 @@ class Graph {
 			});
 	}
 	_setState(state) {
-		if(state.length !== this.nodes.length) {
-			throw new Error("State length is not equal to nodes.length "
-				+this.nodes.length);
+		// if(state.length !== this.nodes.length) {
+		// 	throw new Error("State length is not equal to nodes.length " +this.nodes.length);
+		// }
+		if(state.length !== this.collapsedNodes.length) {
+			throw new Error("State length is not equal to collapsedNodes.length " + this.collapsedNodes.length);
 		}
+		let markDamaged = node => {
+			node.status = -1;
+			node.partitioned = false;
+		};
+		let markUnknown = node => {
+			node.status = 0;
+			node.partitioned = false;
+		};
+		let markPartitioned = node => {
+			// Partitioned away, keep the same state.
+			// Clear action selection (blue)
+			if(node.status == 2)
+				node.status = 1;
+			node.partitioned = true;
+		};
+		let markEnergized = node => {
+			if(node.status > 0)
+				node.status = 1;
+			else
+				node.status = 2;
+			node.partitioned = false;
+		};
 		for(let i=0; i<state.length; ++i) {
-			let node = this.nodes[i];
+			let nodes = this.collapsedNodes[i];
 			switch(state[i]) {
 				case "D":
-					node.status = -1;
-					node.partitioned = false;
+					nodes.map(markDamaged);
 					break;
 				case "U":
-					node.status = 0;
-					node.partitioned = false;
+					nodes.map(markUnknown);
 					break;
 				case "-":
-					// Partitioned away, keep the same state.
-					// Clear action selection (blue)
-					if(node.status == 2)
-						node.status = 1;
-					node.partitioned = true;
+					nodes.map(markPartitioned);
 					break;
 				default:
-					// Any energy source.
-					if(node.status > 0)
-						node.status = 1;
-					else
-						node.status = 2;
-					node.partitioned = false;
+					nodes.map(markEnergized);
 			}
 		}
 	}
@@ -1391,6 +1586,15 @@ class Graph {
 		// TODO: Another limitation: When TG powers DER-powered buses,
 		// directions may change completely.
 
+		// Initialize branches for each node.
+		for (let n of this.nodes) {
+			n.branches = [];
+		}
+		for (let b of this.branches) {
+			this.nodes[b.nodes[0]].branches.push(b);
+			this.nodes[b.nodes[1]].branches.push(b);
+		}
+
 		let externallyConnected = this.nodes.map(node => false);
 		for (let e of this.externalBranches) {
 			externallyConnected[e.node] = true;
@@ -1425,8 +1629,7 @@ class Graph {
 					// Find a suitable source node.
 					let source = null;
 					for (let b of this.nodes[target].branches) {
-						let other = b.branch.nodes[0] == target ?
-								b.branch.nodes[1] : b.branch.nodes[0];
+						let other = b.nodes[0] == target ?  b.nodes[1] : b.nodes[0];
 						if (lastState[other] == s[target]) {
 							source = other;
 							break;
@@ -1436,14 +1639,14 @@ class Graph {
 					if (source == null) continue;
 					// Energize the relevant branch.
 					for(let b of this.nodes[target].branches) {
-						if (b.branch.nodes[0] == target && b.branch.nodes[1] == source) {
-							b.branch.nodes.reverse();
-							b.branch.energized = 1;
-							lastEnergizedBranches.push(b.branch);
+						if (b.nodes[0] == target && b.nodes[1] == source) {
+							b.nodes.reverse();
+							b.energized = 1;
+							lastEnergizedBranches.push(b);
 							break;
-						} else if (b.branch.nodes[0] == source && b.branch.nodes[1] == target) {
-							b.branch.energized = 1;
-							lastEnergizedBranches.push(b.branch);
+						} else if (b.nodes[0] == source && b.nodes[1] == target) {
+							b.energized = 1;
+							lastEnergizedBranches.push(b);
 							break;
 						}
 					}
