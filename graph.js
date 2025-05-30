@@ -180,9 +180,7 @@ class Graph {
 				console.log("Warning: field not found in graph:", field);
 			}
 		});
-		// nodes need to know their indexes
 		this.nodes.forEach((node, i) => {
-			node.index = i;
 			node.partitioned = false;
 		});
 		BottomRightPanel.classList.add("hidden");
@@ -277,12 +275,17 @@ class Graph {
 	 * Update this.groups from node group info.
 	 */
 	updateGroups() {
+		this.nodes.forEach((node, i) => {
+			node.index = i;
+		});
 		this.groups = {}
+		this.groupOrder = [];
 		for (const node of this.nodes) {
 			if ("group" in node) {
 				if (node.group in this.groups) {
 					this.groups[node.group].nodes.push(node);
 				} else {
+					this.groupOrder.push(node.group);
 					this.groups[node.group] = {
 						nodes: [node],
 						collapsed: false,
@@ -316,7 +319,7 @@ class Graph {
 		let myExternalBranches = structuredClone(this.externalBranches);
 		let oldToNew = {};
 
-		for (const groupName in this.groups) {
+		for (const groupName of this.groupOrder) {
 			const group = this.groups[groupName];
 			if (group.collapsed || collapseAll) {
 				const newNodeIndex = myNodes.length;
@@ -353,15 +356,14 @@ class Graph {
 		const branchesToRemove = [];
 		myBranches.forEach((branch, branchIndex) => {
 			const [i0, i1] = branch.nodes;
-			if (i0 in oldToNew && i1 in oldToNew) {
-				// Branch between nodes to be merged, mark it for removal
-				branchesToRemove.push(branchIndex);
-			} else if (i0 in oldToNew) {
-				// Branch connected to a node to be merged, update its node reference
+			if (i0 in oldToNew) {
 				branch.nodes[0] = oldToNew[i0];
-			} else if (i1 in oldToNew) {
-				// Branch connected to a node to be merged, update its node reference
+			}
+			if (i1 in oldToNew) {
 				branch.nodes[1] = oldToNew[i1];
+				if (branch.nodes[0] == branch.nodes[1]) {
+					branchesToRemove.push(branchIndex);
+				}
 			}
 		});
 
@@ -391,6 +393,12 @@ class Graph {
 					return acc;
 				}, nodeIndex);
 			});
+		});
+		myExternalBranches.forEach(branch => {
+			branch.node = oldIndices.reduce((acc, oldIndex, i) => {
+				if (branch.node > oldIndex) acc--;
+				return acc;
+			}, branch.node);
 		});
 
 		return [myNodes, myBranches, myExternalBranches];
@@ -471,17 +479,28 @@ class Graph {
 		});
 
 		// Update the index field of all nodes
-		this.nodes.forEach((node, i) => {
-			node.index = i;
-		});
+		this.updateGroups();
 
 		this.rerender();
 	}
+	/**
+	 * Given a list of nodes, put them in the same group.
+	 */
+	groupNodes(nodes) {
+		let groupIndex = 0;
+		for (; groupIndex in this.groups; ++groupIndex);
+		for (const n of nodes) {
+			n.group = groupIndex;
+		}
+		this.updateGroups();
+	}
 
-	mergeBestByMaxDistance(maxDistance) {
+	mergeBestByMaxDistance(maxDistance, merge=true) {
 		let bestDistance = Infinity;
 		let best = null;
-		let adjList = this.nodes.map(() => []);
+		let [nodes, branches, externalBranches] = !merge ?
+			this.collapseGroups(true) : [this.nodes, this.branches, this.externalBranches];
+		let adjList = nodes.map(() => []);
 
 		let minFirst = true;
 		let comp;
@@ -492,19 +511,19 @@ class Graph {
 			bestDistance = -bestDistance;
 		}
 
-		this.branches.forEach(branch => {
+		branches.forEach(branch => {
 			let a = branch.nodes[0];
 			let b = branch.nodes[1];
 			adjList[a].push(b);
 			adjList[b].push(a);
 		});
 
-		for (let index = 0; index < this.nodes.length; ++index) {
+		for (let index = 0; index < nodes.length; ++index) {
 			adjList[index].forEach(other => {
 				let list = [index, other];
-				let current = other;
-				let distance = earthDistance(this.nodes[index].latlng, this.nodes[other].latlng);
+				let distance = earthDistance(nodes[index].latlng, nodes[other].latlng);
 				if (distance > maxDistance) return;
+				// let current = other;
 				//while (true) {
 				//	let nexts = adjList[current].filter(i => !list.includes(i));
 				//	if (nexts.length != 1) break;
@@ -526,7 +545,13 @@ class Graph {
 
 		if (best) {
 			console.log(bestDistance)
-			this.mergeNodes(best);
+			if (merge) {
+				this.mergeNodes(best);
+			} else {
+				console.log(best);
+				let l = this.collapsedNodes[best[0]].concat(this.collapsedNodes[best[1]]);
+				this.groupNodes(l);
+			}
 			return true;
 		} else {
 			return false;
@@ -1254,9 +1279,7 @@ class Graph {
 			if(b.node > i) b.node--;
 		});
 		// Update indices
-		this.nodes.forEach((node, i) => {
-			node.index = i;
-		});
+		this.updateGroups();
 	}
 	removeElement(victim) {
 		let i;
