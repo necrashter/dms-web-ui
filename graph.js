@@ -1627,19 +1627,19 @@ class Graph {
 		let lastEnergizedBranches;
 		for (let s of hist) {
 			this._setState(s);
+			let currentState = this.nodes.map(node => Math.sign(node.status));
 			if (lastState == null) {
-				// Shallow copy
-				lastState = [...s];
+				lastState = this.nodes.map(() => 0);
 				continue;
 			}
 			lastEnergizedBranches = [];
 			let queue = [];
-			for (let i = 0; i < s.length; ++i) {
-				if (lastState[i] != s[i] && s[i] != "-") {
-					if (s[i] == "D" || externallyConnected[i]) {
+			for (let i = 0; i < currentState.length; ++i) {
+				if (lastState[i] != currentState[i] && !this.nodes[i].partitioned) {
+					if (currentState[i] == -1 || externallyConnected[i]) {
 						// Damaged, no need to update nearby branches.
 						// Connected to an energy source, external branch is already updated.
-						lastState[i] = s[i];
+						lastState[i] = currentState[i];
 					} else {
 						queue.push(i);
 					}
@@ -1653,7 +1653,7 @@ class Graph {
 					let source = null;
 					for (let b of this.nodes[target].branches) {
 						let other = b.nodes[0] == target ?  b.nodes[1] : b.nodes[0];
-						if (lastState[other] == s[target]) {
+						if (lastState[other] == currentState[target]) {
 							source = other;
 							break;
 						}
@@ -1676,7 +1676,7 @@ class Graph {
 					// Remove from queue.
 					queue.splice(qi, 1);
 					// Update last state for the next iteration.
-					lastState[target] = s[target];
+					lastState[target] = currentState[target];
 				}
 				if (queue.length == startLength) {
 					// We didn't remove any items from the queue.
