@@ -76,7 +76,7 @@ class InteractivePolicy {
 	 */
 	constructor(_graph, solution, initialize=true) {
 		this.graph = graph;
-		// Preserve the original solution for download.
+		// Preserve the original solution
 		this.solution = solution;
 		// Shallow copy the keys.
 		for (let key in solution) {
@@ -87,9 +87,6 @@ class InteractivePolicy {
 			this.previousStates = [];
 			this.setState(0);
 		}
-	}
-	download() {
-		downloadData("solution.json", JSON.stringify(this.solution));
 	}
 	setAction(actionNum, next) {
 		this.actionNum = actionNum;
@@ -231,13 +228,15 @@ class InteractivePolicy {
 			<div class="rightFlexFloat">P = ${action[1].toFixed(3)}</div>
 			`;
 	}
-	nextState() {
+	async nextState() {
 		this.previousStates.push({
 			state: this.state,
 			actionNum: this.actionNum,
 			next: this.next,
 		});
-		this.setState(this.action[this.next][0] + ACTION_OFFSET);
+		let nextIndex = this.action[this.next][0] + ACTION_OFFSET;
+		await this.solution.cacheTransitionOutcomes(this.transitions[nextIndex]);
+		this.setState(nextIndex);
 	}
 	previousState() {
 		let prev = this.previousStates.pop();
@@ -585,6 +584,97 @@ function requestPolicy(graph, settings) {
 	return Network.post("/policy", JSON.stringify(request));
 }
 
+// New function to request states from the cached policy
+function requestPolicyStates(policyHash, stateIndices) {
+	let request = {
+		policy_hash: policyHash,
+		state_indices: stateIndices
+	};
+	return Network.post("/policy/states", JSON.stringify(request));
+}
+
+// Lazy-loading wrapper for large policies
+class LazyPolicy {
+	constructor(response) {
+		for (let k in response) {
+			this[k] = response[k];
+		}
+		
+		// Cache for loaded state data
+		this.stateCache = new Map();
+
+		let getArrayProxy = (fieldName, length=0) => new Proxy([], {
+			get: (target, prop) => {
+				if (prop === 'length') {
+					return length;
+				}
+
+				if (typeof prop === 'string' && !isNaN(prop)) {
+					let idx = parseInt(prop);
+					return this.getStateProperty(idx, fieldName);
+				}
+				// If the accessed property is not a numeric string, the default behavior is used (from the underlying array).
+				return target[prop];
+			}
+		});
+	
+		this.transitions = getArrayProxy("transitions", 0);
+		this.states = getArrayProxy("states", this.states_count);
+		this.policy = getArrayProxy("policy", this.states_count);
+		this.values = getArrayProxy("values", this.states_count);
+		if (this.teams_count > 0) {
+			this.teams = getArrayProxy("teams", this.states_count);
+			this.travelTimes = getArrayProxy("travelTimes", this.states_count);
+		}
+	}
+	
+	async cacheStates(indices) {
+		// Filter out already cached indices
+		let uncachedIndices = indices.filter(idx => !this.stateCache.has(idx));
+		
+		if (uncachedIndices.length === 0) {
+			// All indices are cached
+			return indices.map(idx => this.stateCache.get(idx));
+		}
+		
+		// Make the request
+		let requestPromise = requestPolicyStates(this.policy_hash, uncachedIndices)
+			.then(response => {
+				let results = JSON.parse(response);
+				// Cache the results
+				for (let i = 0; i < uncachedIndices.length; i++) {
+					this.stateCache.set(uncachedIndices[i], results[i]);
+				}
+			});
+		await requestPromise;
+		
+		return indices.map(idx => this.stateCache.get(idx));
+	}
+
+	cacheTransitionOutcomes(transitions) {
+		let outcomes = [];
+		for (let action of transitions) {
+			for (let outcome of action) {
+				outcomes.push(outcome[0]);
+			}
+		}
+		return this.cacheStates(outcomes);
+	}
+	
+	async preloadInitialStates() {
+		// Preload state 0 and a few nearby states for initial rendering
+		let firstCache = await this.cacheStates([0]);
+		await this.cacheTransitionOutcomes(firstCache[0].transitions);
+	}
+
+	getStateProperty(idx, property) {
+		if (this.stateCache.has(idx)) {
+			return this.stateCache.get(idx)[property];
+		}
+		throw new Error(`Uncached access to ${property}[${idx}]`);
+	}
+}
+
 var lastRequestedPolicy = null;
 
 /**
@@ -596,8 +686,17 @@ function requestNewPolicy(div, graph, settings={}) {
 	div.html("");
 	addSpinnerDiv(div).append("p").text("Waiting response from server...");
 	requestPolicy(graph, settings).then(response => {
-		let policy = JSON.parse(response);
-		loadPolicy(div, graph, policy, settings);
+		let result = JSON.parse(response);
+		// Create a lazy-loading policy wrapper and preload initial state
+		let lazyPolicy = new LazyPolicy(result);
+		lazyPolicy.preloadInitialStates().then(() => {
+			loadPolicy(div, graph, lazyPolicy, settings);
+		}).catch(error => {
+			console.error("Failed to preload initial states:", error);
+			div.html("");
+			div.append("b").text("Failed to load initial policy data")
+				.style("color","red");
+		});
 	}).catch(error => {
 		div.html("");
 		div.append("b").text("Failed to get policy")
@@ -1461,9 +1560,12 @@ class InteractivePolicyView {
 			.text("🠊");
 		buttonDiv.append("div").classed("info", true)
 			.html(`State #${this.policy.state}<br/>${this.policy.states.length} states`);
+		
+		let ignoreInputs = false;
 
 		if(this.policy.previousStates.length>0) {
 			prev.on("click", () => {
+				if (ignoreInputs) return;
 				this.policy.previousState();
 				this.policyNavigator(); // refresh
 			});
@@ -1504,8 +1606,12 @@ class InteractivePolicyView {
 				});
 
 			next.on("click", () => {
-				this.policy.nextState();
-				this.policyNavigator(); // refresh
+				if (ignoreInputs) return;
+				// Don't accept inputs while processing the nextState request.
+				ignoreInputs = true;
+				this.policy.nextState().then(() => {
+					this.policyNavigator(); // refresh
+				});
 			});
 			this.div.append("p").text("The following transitions are possible:");
 			let transitionList = this.div.append("div")
@@ -1556,11 +1662,6 @@ class InteractivePolicyView {
 			let time = this.policy.times[this.policy.state];
 			infoList.append("li").text("Time: "+time);
 		}
-		infoDiv.append("div").classed("blockButton", true)
-			.text("Download This Solution")
-			.on("click", () => {
-				this.policy.download();
-			});
 		if(detailsOpen) {
 			infoDiv.attr("open", "");
 		}
