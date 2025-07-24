@@ -69,6 +69,21 @@ function getMouseTeam(event) {
 	return team;
 }
 
+function mergePartitions(states) {
+	let state = states[0].slice();
+	for (let i = 1; i < states.length; ++i) {
+		let current = states[i];
+		for (let j = 0; j < state.length; ++j) {
+			if (current[j] != '-') {
+				if (state[j] != '-') {
+					console.warn("Partitions are not mutually exclusive in mergePartitions!");
+				}
+				state[j] = current[j];
+			}
+		}
+	}
+	return state;
+}
 
 class InteractivePolicy {
 	/**
@@ -82,126 +97,81 @@ class InteractivePolicy {
 		for (let key in solution) {
 			this[key] = solution[key];
 		}
+		this.previousStates = [];
 		if(initialize) {
-			this.end = false; // if true (No more actions available)
-			this.previousStates = [];
-			this.setState(0);
+			this.setState([0]);
 		}
 	}
-	setAction(actionNum, next) {
-		this.actionNum = actionNum;
-		this.action = this.actions[actionNum];
-		if(this.action) {
-			this.end = this.action.length == 1 && this.action[0][0]+ACTION_OFFSET == this.state;
+	setState(indices, nextAction=null, nextTransitions=null) {
+		this.currentIndices = indices;
+		this.currentState = mergePartitions(this.currentIndices.map(i => this.states[i]));
+		this.currentActions = this.currentIndices.map(i => this.transitions[i]);
+		this.partEnd = this.currentActions.map((actions, i) => {
+			return actions.length == 1 && actions[0].length == 1 && actions[0][0][0] == this.currentIndices[i];
+		});
+		this.end = this.partEnd.reduce((a,b) => a && b);
+		if (nextAction == null) {
+			nextAction = this.currentIndices.map(i => this.policy[i]);
+		}
+		this.setAction(nextAction, nextTransitions);
+	}
+	setAction(actionIndices, nextTransitions=null) {
+		this.actionIndices = actionIndices;
+		this.action = this.actionIndices.map((ai, i) => this.currentActions[i][ai]);
+		if (nextTransitions == null) {
+			nextTransitions = this.currentIndices.map(() => 0);
+		}
+		this.setNext(nextTransitions);
+	}
+	setNext(nextTransitions=null) {
+		// Represents which transition to take in the current action, for each partition.
+		this.nextTransitions = nextTransitions;
+		if (nextTransitions != null) {
+			this.nextIndices = [];
+			let nextStates = [];
+			for (let i = 0; i < this.currentIndices.length; ++i) {
+				let next = this.nextTransitions[i];
+				let indices = this.action[i][next][0];
+				this.nextIndices.push(...indices);
+				let partitions = indices.map(i => this.states[i]);
+				nextStates.push(...partitions);
+			}
+			this.nextState = mergePartitions(nextStates);
 		} else {
-			this.end = true;
+			this.nextIndices = null;
+			this.nextState = null;
 		}
-		// set graph to the next state
-		if(next === null || this.end) {
-			let hist = this.previousStates.map(s => this.states[s.state]);
-			hist.push(this.states[this.state]);
-			if(this.end) hist.push(this.states[this.state]);
-			this.graph.setState(hist);
+		let hist = this.previousStates.map(p => p.currentState);
+		hist.push(this.currentState);
+		if (this.nextState == null) {
+			hist.push(this.currentState);
+		} else {
+			hist.push(this.nextState);
 		}
-		else this.setNext(next);
-	}
-	setState(state, next = 0) {
-		this.state = state;
-		this.actions = this.transitions[this.state];
-		let nextAction = this.policy[this.state];
-		this.setAction(nextAction, next);
-	}
-	setStateAndAction(state, action, next = 0) {
-		this.state = state;
-		this.actions = this.transitions[this.state];
-		this.setAction(action, next);
-	}
-	setNext(i) {
-		// represents which transition to take in the current action
-		this.next = i;
-		let nextState = this.states[this.action[this.next][0] + ACTION_OFFSET];
-		let hist = this.previousStates.map(s => this.states[s.state]);
-		hist.push(this.states[this.state]);
-		hist.push(nextState);
 		this.graph.setState(hist);
 	}
-	getCurrentState() {
-		return this.states[this.state];
-	}
-	getNextState() {
-		return this.states[this.action[this.next][0] + ACTION_OFFSET];
-	}
-	/**
-	 * Given a list of teams and their history,
-	 * embed the previous location info into teams and return.
-	 */
-	getTeamsWithPrevious(teams, hist) {
-		// Set the previous location of each team.
-		for(let j = 0; j < teams.length; ++j) {
-			for(let i = hist.length-1; i >= 0; --i) {
-				teams[j].previous = null;
-				let prev = hist[i];
-				if(teams[j].index != prev[j].index) {
-					// The index of the previous location.
-					teams[j].previous = prev[j].index;
-					break;
-				}
-			}
-		}
-		return teams;
-	}
-	/**
-	 * Get the current teams with the previous location info.
-	 */
-	getCurrentTeams() {
-		let teams = this.teams[this.state];
-		// History of team states
-		let hist = this.previousStates.map(s => this.teams[s.state]);
-		return this.getTeamsWithPrevious(teams, hist);
-	}
-	/**
-	 * Get the next teams WITHOUT the previous location info.
-	 */
-	getNextTeams() {
-		return this.teams[this.action[this.next][0] + ACTION_OFFSET];
-	}
-	describeAction(actionNum = null) {
-		if(actionNum == null) actionNum =this.actionNum;
+	describeAction(subIndex, actionNum = null) {
+		if(actionNum == null) actionNum = this.actionIndices[subIndex];
 		let header =	"Action #"+actionNum;
 		let energizationInfo = "";
 		let teamInfo = "";
 		let valueInfo = "";
-		if(actionNum == this.policy[this.state]) {
+		let stateIndex = this.currentIndices[subIndex];
+		if(actionNum == this.policy[stateIndex]) {
 			header += " (Policy)";
 		}
 		if(this.values) {
-			let value = this.values[this.state][actionNum];
-			valueInfo = `<span style="float:right;">${value.toFixed(3)}</span>`;
+			let value = this.values[stateIndex][actionNum];
+			if (value)
+				valueInfo = `<span style="float:right;">${value.toFixed(3)}</span>`;
 		}
-		let action = this.actions[actionNum];
-		let currentState = this.states[this.state];
-		let nextState = this.states[action[0][0] + ACTION_OFFSET];
-		let energized = currentState.map((b, i) => b != nextState[i] ? i : null).filter(a => a != null);
+		let action = this.currentActions[subIndex][actionNum];
+		let nextState = mergePartitions(action[0][0].map(i => this.states[i]));
+		let energized = this.currentState.map((b, i) => (nextState[i] != '-' && b != nextState[i]) ? i : null).filter(a => a != null);
 		if(energized.length > 0) {
 			energizationInfo = "&emsp;Node(s): " + energized.join(", ") + "<br/>";
 		} else {
 			energizationInfo = "&emsp;No energizations<br/>";
-		}
-		if(this.teams) {
-			let currentTeam = this.teams[this.state];
-			let nextTeam = this.teams[action[0][0] + ACTION_OFFSET];
-			let teamInfos = [];
-			for(let i = 0; i < currentTeam.length; ++i) {
-				if(currentTeam[i].time > 0) {
-					// En route
-					teamInfos.push((i+1)+" to "+currentTeam[i].index);
-				} else {
-					teamInfos.push((i+1)+" to "+nextTeam[i].index);
-				}
-			}
-			if(teamInfos.length > 0) {
-				teamInfo = "&emsp;Team "+teamInfos.join(", ")+"<br/>";
-			}
 		}
 		return `
 		<b>${header}</b><br/>
@@ -210,41 +180,36 @@ class InteractivePolicy {
 		${teamInfo}
 		`;
 	}
-	describeTransition(action, i) {
-		let nextState = this.states[action[0] + ACTION_OFFSET];
-		let currentState = this.states[this.state];
+	describeTransition(transition, index) {
+		let nextState = mergePartitions(transition[0].map(i => this.states[i]));
 		let list = "";
-		for(let i = 0; i < currentState.length; ++i) {
-			if(nextState[i] != currentState[i]) {
+		for(let i = 0; i < this.currentState.length; ++i) {
+			if(nextState[i] != this.currentState[i] && nextState[i] != '-') {
 				list += `<div>Node #${i}: ${nextState[i]}</div>`;
 			}
 		}
 		if (list == "") {
 			list = "Deterministic Transition";
 		}
-		//return `<div><b>Transition #${i}</b> <br/>`+this.states[action[0] - 1].toString()+"</div>";
 		return `
-			<div><b>Transition #${i}</b> <div>${list}</div> </div>
-			<div class="rightFlexFloat">P = ${action[1].toFixed(3)}</div>
+			<div><b>Transition #${index}</b> <div>${list}</div> </div>
+			<div class="rightFlexFloat">P = ${transition[1].toFixed(3)}</div>
 			`;
 	}
-	async nextState() {
+	async goForward() {
 		this.previousStates.push({
-			state: this.state,
-			actionNum: this.actionNum,
-			next: this.next,
+			currentState: this.currentState,
+			currentIndices: this.currentIndices,
+			actionIndices: this.actionIndices,
+			nextTransitions: this.nextTransitions,
 		});
-		let nextIndex = this.action[this.next][0] + ACTION_OFFSET;
-		await this.solution.cacheTransitionOutcomes(this.transitions[nextIndex]);
-		this.setState(nextIndex);
+		await this.solution.cacheTransitionOutcomes(this.nextIndices.map(i => this.transitions[i]));
+		this.setState(this.nextIndices);
 	}
-	previousState() {
+	goBackward() {
 		let prev = this.previousStates.pop();
 		if(prev === undefined) throw new Error("There's no previous state");
-		this.setStateAndAction(prev.state, prev.actionNum, prev.next);
-	}
-	nextStateAvailable() {
-		return !this.end;
+		this.setState(prev.currentIndices, prev.actionIndices, prev.nextTransitions);
 	}
 
 	/**
@@ -653,9 +618,14 @@ class LazyPolicy {
 
 	cacheTransitionOutcomes(transitions) {
 		let outcomes = [];
-		for (let action of transitions) {
-			for (let outcome of action) {
-				outcomes.push(outcome[0]);
+		for (let transition of transitions) {
+			for (let action of transition) {
+				for (let outcome of action) {
+					// In partitioning, each outcome will be a list of states.
+					for (let o of outcome[0]) {
+						outcomes.push(o);
+					}
+				}
 			}
 		}
 		return this.cacheStates(outcomes);
@@ -664,7 +634,7 @@ class LazyPolicy {
 	async preloadInitialStates() {
 		// Preload state 0 and a few nearby states for initial rendering
 		let firstCache = await this.cacheStates([0]);
-		await this.cacheTransitionOutcomes(firstCache[0].transitions);
+		await this.cacheTransitionOutcomes([firstCache[0].transitions]);
 	}
 
 	getStateProperty(idx, property) {
@@ -1520,8 +1490,8 @@ class InteractivePolicyView {
 			return;
 		}
 		if(Settings.renderNextStateInfo) {
-			let currentState = this.policy.getCurrentState();
-			let nextState = this.policy.getNextState();
+			let currentState = this.policy.currentState;
+			let nextState = this.policy.nextState;
 			for(let i=0; i<currentState.length; ++i) {
 				if(currentState[i] != nextState[i]) {
 					let node = this.graph.nodes[i];
@@ -1566,14 +1536,22 @@ class InteractivePolicyView {
 		if(this.policy.previousStates.length>0) {
 			prev.on("click", () => {
 				if (ignoreInputs) return;
-				this.policy.previousState();
+				this.policy.goBackward();
 				this.policyNavigator(); // refresh
 			});
 		} else {
 			prev.classed("disabled", true);
 		}
 
-		if(this.policy.nextStateAvailable()) {
+		if (!this.policy.end) {
+			next.on("click", () => {
+				if (ignoreInputs) return;
+				// Don't accept inputs while processing the nextState request.
+				ignoreInputs = true;
+				this.policy.goForward().then(() => {
+					this.policyNavigator(); // refresh
+				});
+			});
 			/*
 			buttonDiv.append("div").classed("blockButton", true)
 				.text("krink")
@@ -1583,59 +1561,56 @@ class InteractivePolicyView {
 				.on("click", getGraphDiagram)
 			*/
 			// select box for action
-			var innerDiv;
-			const wrapperDiv = this.div.append("div")
-				.style("margin", "1em")
-				.attr("class","CustomSelect");
-			wrapperDiv.append("div")
-				.attr("class", "CustomSelectHead")
-				.html(this.policy.describeAction())
-				.on("click", function(_) {
-					innerDiv.classList.toggle("open");
-				}).node();
-			const ul = wrapperDiv.append("div").attr("class", "CustomSelectList").append("div");
-			innerDiv = ul.node();
+			for (let partIndex = 0; partIndex < this.policy.currentIndices.length; ++partIndex) {
+				if (this.policy.partEnd[partIndex]) {
+					continue;
+				}
+				const wrapperDiv = this.div.append("div")
+					.style("margin", "1em")
+					.attr("class","CustomSelect");
+				const wrapperHead = wrapperDiv.append("div")
+					.attr("class", "CustomSelectHead")
+					.html(this.policy.describeAction(partIndex));
+				const ul = wrapperDiv.append("div").attr("class", "CustomSelectList").append("div");
+				const innerDiv = ul.node();
+				wrapperHead.on("click", (_) => innerDiv.classList.toggle("open"));
 
-			ul.selectAll("div")
-				.data(Object.keys(this.policy.actions)).join("div")
-				.attr("class", "CustomSelectElement")
-				.html((i) => this.policy.describeAction(i))
-				.on("click", (i) => {
-					this.policy.setAction(i, 0);
-					this.policyNavigator();
-				});
-
-			next.on("click", () => {
-				if (ignoreInputs) return;
-				// Don't accept inputs while processing the nextState request.
-				ignoreInputs = true;
-				this.policy.nextState().then(() => {
-					this.policyNavigator(); // refresh
-				});
-			});
-			this.div.append("p").text("The following transitions are possible:");
-			let transitionList = this.div.append("div")
-				.classed("selectList", true)
-				.classed("wide", true);
-			let updateLi = (li) => {
-				li.attr("class", (_, i) => {
-					if(i == this.policy.next) return "selected";
-					else return "";
-				})
+				ul.selectAll("div")
+					.data(Object.keys(this.policy.currentActions[partIndex])).join("div")
+					.attr("class", "CustomSelectElement")
+					.html((i) => this.policy.describeAction(partIndex, i))
+					.on("click", (i) => {
+						this.policy.actionIndices[partIndex] = i;
+						this.policy.nextTransitions[partIndex] = 0;
+						this.policy.setAction(this.policy.actionIndices, this.policy.nextTransitions);
+						this.policyNavigator();
+					});
+				// this.div.append("p").text("The following transitions are possible:");
+				let transitionList = this.div.append("div")
+					.classed("selectList", true)
+					.classed("wide", true);
+				let updateLi = (li) => {
+					li.attr("class", (_, i) => {
+						if(i == this.policy.nextTransitions[partIndex]) return "selected";
+						else return "";
+					})
+				}
+				let transitions = this.policy.currentActions[partIndex][this.policy.actionIndices[partIndex]];
+				let li = transitionList.selectAll("div")
+					.data(transitions).join("div")
+					.html(this.policy.describeTransition.bind(this.policy))
+					.on("click", (_, i) => {
+						this.policy.nextTransitions[partIndex] = i;
+						this.setNext(this.policy.nextTransitions);
+						updateLi(li);
+					});
+				updateLi(li);
+				/*
+				let p = this.policy.successProbability(this.policy.index+1);
+				this.div.append("p").text("Success Probability for next step: "+
+					p.toFixed(3));
+				*/
 			}
-			let li = transitionList.selectAll("div")
-				.data(this.policy.action).join("div")
-				.html(this.policy.describeTransition.bind(this.policy))
-				.on("click", (_, i) => {
-					this.setNext(i);
-					updateLi(li);
-				});
-			updateLi(li);
-			/*
-			let p = this.policy.successProbability(this.policy.index+1);
-			this.div.append("p").text("Success Probability for next step: "+
-				p.toFixed(3));
-			*/
 		} else {
 			next.classed("disabled", true);
 			this.div.append("p")
